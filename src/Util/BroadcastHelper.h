@@ -33,11 +33,6 @@ public:
     };
 
     static uint8_t GetLocale();
-    static char const* GetChannelPattern(
-        uint32_t channelId,
-        uint8_t locale,
-        char const* fallbackPattern
-    );
     static bool BroadcastTest(
         PlayerbotAI* ai,
         Player* bot

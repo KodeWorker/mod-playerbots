@@ -646,8 +646,7 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
                 case ChatChannelId::LOCAL_DEFENSE:
                 {
                     char new_channel_name_buf[100];
-                    char const* pattern = BroadcastHelper::GetChannelPattern(channel->ChannelID, locale, channel->pattern[locale]);
-                    snprintf(new_channel_name_buf, 100, pattern, current_zone_name.c_str());
+                    snprintf(new_channel_name_buf, 100, channel->pattern[locale], current_zone_name.c_str());
                     new_channel = cMgr->GetJoinChannel(new_channel_name_buf, channel->ChannelID);
                     break;
                 }
@@ -655,20 +654,18 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
                 case ChatChannelId::GUILD_RECRUITMENT:
                 {
                     char new_channel_name_buf[100];
-                    char const* pattern = BroadcastHelper::GetChannelPattern(channel->ChannelID, locale, channel->pattern[locale]);
                     //3459 is ID for a zone named "City" (only exists for the sake of using its name)
                     //Currently in magons TBC, if you switch zones, then you join "Trade - <zone>" and "GuildRecruitment - <zone>"
                     //which is a core bug, should be "Trade - City" and "GuildRecruitment - City" in both 1.12 and TBC
                     //but if you (actual player) logout in a city and log back in - you join "City" versions
-                    snprintf(new_channel_name_buf, 100, pattern, GET_PLAYERBOT_AI(bot)->GetLocalizedAreaName(GetAreaEntryByAreaID(3459)).c_str());
+                    snprintf(new_channel_name_buf, 100, channel->pattern[locale], GET_PLAYERBOT_AI(bot)->GetLocalizedAreaName(GetAreaEntryByAreaID(3459)).c_str());
                     new_channel = cMgr->GetJoinChannel(new_channel_name_buf, channel->ChannelID);
                     break;
                 }
                 case ChatChannelId::LOOKING_FOR_GROUP:
                 case ChatChannelId::WORLD_DEFENSE:
                 {
-                    char const* pattern = BroadcastHelper::GetChannelPattern(channel->ChannelID, locale, channel->pattern[locale]);
-                    new_channel = cMgr->GetJoinChannel(pattern, channel->ChannelID);
+                    new_channel = cMgr->GetJoinChannel(channel->pattern[locale], channel->ChannelID);
                     break;
                 }
                 default:

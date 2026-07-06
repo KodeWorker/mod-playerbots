@@ -1,54 +1,19 @@
 
 #include "Playerbots.h"
 #include "BroadcastHelper.h"
-#include "Config.h"
 #include "ServerFacade.h"
 #include "Channel.h"
 #include "AiFactory.h"
-#include <unordered_map>
 
 BroadcastHelper::BroadcastHelper() {}
 
 uint8 BroadcastHelper::GetLocale()
 {
-    // DBC.Locale reflects the admin's configured intent (e.g. 5 = zhTW), but
-    // World::DetectDBCLang() silently downgrades sWorld->GetDefaultDbcLocale()
-    // to whatever locale slot is actually populated in the server's own DBC
-    // files (usually enUS-only) -- so it can never report a locale the DBC
-    // data doesn't have strings for, even when that's what was configured.
-    // Read the configured value directly so locale-gated overrides (channel
-    // name patterns, class/race names, ...) actually engage.
-    uint8 locale = sConfigMgr->GetOption<int32>("DBC.Locale", 255);
-    if (locale >= TOTAL_LOCALES)
-        locale = sWorld->GetDefaultDbcLocale();
+    uint8 locale = sWorld->GetDefaultDbcLocale();
+    // -- In case we're using auto detect on config file^M
     if (locale >= TOTAL_LOCALES)
         locale = LocaleConstant::LOCALE_enUS;
     return locale;
-}
-
-// ChatChannels.dbc ships without a populated zhTW locale slot, so channel->pattern[LOCALE_zhTW]
-// silently falls back to the enUS string. These overrides come straight from the official
-// zhTW client's ChatChannels.dbc (DBFilesClient/ChatChannels.dbc in patch-zhTW-3.MPQ).
-static std::unordered_map<uint32, char const*> const zhTWChannelPatterns =
-{
-    { ChatChannelId::GENERAL,            "綜合 - %s" },
-    { ChatChannelId::TRADE,               "交易 - %s" },
-    { ChatChannelId::LOCAL_DEFENSE,       "本地防務 - %s" },
-    { ChatChannelId::WORLD_DEFENSE,       "世界防務" },
-    { ChatChannelId::GUILD_RECRUITMENT,   "公會招募 - %s" },
-    { ChatChannelId::LOOKING_FOR_GROUP,   "尋求組隊" },
-};
-
-char const* BroadcastHelper::GetChannelPattern(uint32 channelId, uint8 locale, char const* fallbackPattern)
-{
-    if (locale == LocaleConstant::LOCALE_zhTW)
-    {
-        auto it = zhTWChannelPatterns.find(channelId);
-        if (it != zhTWChannelPatterns.end())
-            return it->second;
-    }
-
-    return fallbackPattern;
 }
 
 bool BroadcastHelper::BroadcastTest(PlayerbotAI* ai, Player* /* bot */)
