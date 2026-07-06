@@ -628,9 +628,37 @@ std::string const ChatHelper::FormatClass(Player* player, int8 spec)
     return out.str();
 }
 
-std::string const ChatHelper::FormatClass(uint8 cls) { return classes[cls]; }
+std::string const ChatHelper::FormatClass(uint8 cls)
+{
+    LocaleConstant locale = sWorld->GetDefaultDbcLocale();
+    if (locale != LOCALE_enUS)
+    {
+        if (ChrClassesEntry const* classEntry = sChrClassesStore.LookupEntry(cls))
+        {
+            std::string const name = classEntry->name[locale];
+            if (!name.empty())
+                return name;
+        }
+    }
 
-std::string const ChatHelper::FormatRace(uint8 race) { return races[race]; }
+    return classes[cls];
+}
+
+std::string const ChatHelper::FormatRace(uint8 race)
+{
+    LocaleConstant locale = sWorld->GetDefaultDbcLocale();
+    if (locale != LOCALE_enUS)
+    {
+        if (ChrRacesEntry const* raceEntry = sChrRacesStore.LookupEntry(race))
+        {
+            std::string const name = raceEntry->name[locale];
+            if (!name.empty())
+                return name;
+        }
+    }
+
+    return races[race];
+}
 
 uint32 ChatHelper::parseSkill(std::string const text)
 {
