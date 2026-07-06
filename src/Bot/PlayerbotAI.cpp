@@ -11,6 +11,7 @@
 #include <string>
 
 #include "AiFactory.h"
+#include "BroadcastHelper.h"
 #include "BudgetValues.h"
 #include "ChannelMgr.h"
 #include "CharacterPackets.h"
@@ -2701,7 +2702,12 @@ std::string PlayerbotAI::GetLocalizedAreaName(const AreaTableEntry* entry)
     std::string name;
     if (entry)
     {
-        name = entry->area_name[sWorld->GetDefaultDbcLocale()];
+        // AreaTable.dbc ships without a populated zhTW locale slot on this
+        // server, so this will fall through to the enUS name below until a
+        // zone-name translation source/override table is added -- see
+        // BroadcastHelper::GetLocale()/GetChannelPattern for the equivalent
+        // fix already applied to channel name patterns.
+        name = entry->area_name[BroadcastHelper::GetLocale()];
         if (name.empty())
             name = entry->area_name[LOCALE_enUS];
     }

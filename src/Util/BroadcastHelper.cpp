@@ -1,6 +1,7 @@
 
 #include "Playerbots.h"
 #include "BroadcastHelper.h"
+#include "Config.h"
 #include "ServerFacade.h"
 #include "Channel.h"
 #include "AiFactory.h"
@@ -10,8 +11,16 @@ BroadcastHelper::BroadcastHelper() {}
 
 uint8 BroadcastHelper::GetLocale()
 {
-    uint8 locale = sWorld->GetDefaultDbcLocale();
-    // -- In case we're using auto detect on config file^M
+    // DBC.Locale reflects the admin's configured intent (e.g. 5 = zhTW), but
+    // World::DetectDBCLang() silently downgrades sWorld->GetDefaultDbcLocale()
+    // to whatever locale slot is actually populated in the server's own DBC
+    // files (usually enUS-only) -- so it can never report a locale the DBC
+    // data doesn't have strings for, even when that's what was configured.
+    // Read the configured value directly so locale-gated overrides (channel
+    // name patterns, class/race names, ...) actually engage.
+    uint8 locale = sConfigMgr->GetOption<int32>("DBC.Locale", 255);
+    if (locale >= TOTAL_LOCALES)
+        locale = sWorld->GetDefaultDbcLocale();
     if (locale >= TOTAL_LOCALES)
         locale = LocaleConstant::LOCALE_enUS;
     return locale;
