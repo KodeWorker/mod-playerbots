@@ -156,7 +156,14 @@ bool CastSpellAction::Execute(Event /*event*/)
             if (!spellInfo)
                 continue;
 
-            std::string const namepart = ChatHelper::GetLocalizedSpellName(spellInfo);
+            // spell is always the hardcoded English literal "conjure food"/"conjure water"
+            // (guarded above), so match against the enUS name specifically; it can be
+            // null/empty on single-locale (e.g. zhTW) DBC data.
+            char const* enUSName = spellInfo->SpellName[LOCALE_enUS];
+            if (!enUSName || !*enUSName)
+                continue;
+
+            std::string const namepart = enUSName;
             std::wstring wnamepart;
             if (!Utf8toWStr(namepart, wnamepart))
                 return false;
