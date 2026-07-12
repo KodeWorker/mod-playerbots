@@ -4393,26 +4393,28 @@ bool PlayerbotAI::canDispel(SpellInfo const* spellInfo, uint32 dispelType)
     if (spellInfo->Dispel != dispelType)
         return false;
 
-    if (!spellInfo->SpellName[0])
+    // dispel_whitelist and the hardcoded armor names below are fixed English literals,
+    // so match against the enUS name specifically (not the display locale). That slot
+    // can be null/empty on single-locale (e.g. zhTW) DBC data, so guard against that -
+    // treating an unnamed spell as always-dispellable, same as before this fix.
+    char const* spellName = spellInfo->SpellName[LOCALE_enUS];
+    if (!spellName || !*spellName)
     {
         return true;
     }
 
     for (std::string& wl : dispel_whitelist)
     {
-        if (strcmpi((const char*)spellInfo->SpellName[0], wl.c_str()) == 0)
+        if (strcmpi(spellName, wl.c_str()) == 0)
         {
             return false;
         }
     }
 
-    return !spellInfo->SpellName[0] || (strcmpi((const char*)spellInfo->SpellName[0], "demon skin") &&
-                                        strcmpi((const char*)spellInfo->SpellName[0], "mage armor") &&
-                                        strcmpi((const char*)spellInfo->SpellName[0], "frost armor") &&
-                                        strcmpi((const char*)spellInfo->SpellName[0], "wavering will") &&
-                                        strcmpi((const char*)spellInfo->SpellName[0], "chilled") &&
-                                        strcmpi((const char*)spellInfo->SpellName[0], "mana tap") &&
-                                        strcmpi((const char*)spellInfo->SpellName[0], "ice armor"));
+    return strcmpi(spellName, "demon skin") && strcmpi(spellName, "mage armor") &&
+           strcmpi(spellName, "frost armor") && strcmpi(spellName, "wavering will") &&
+           strcmpi(spellName, "chilled") && strcmpi(spellName, "mana tap") &&
+           strcmpi(spellName, "ice armor");
 }
 
 bool IsAlliance(uint8 race)

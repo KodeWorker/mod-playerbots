@@ -35,10 +35,12 @@ static bool CompareSpells(SpellListEntry const& lhSpell, SpellListEntry const& r
     {
         // Defensive check: if DBC data is broken and spell names are nullptr,
         // fall back to id ordering instead of risking a crash in std::strcmp.
-        if (!lhSpellInfo->SpellName[0] || !rhSpellInfo->SpellName[0])
+        char const* lhName = ChatHelper::GetLocalizedSpellName(lhSpellInfo);
+        char const* rhName = ChatHelper::GetLocalizedSpellName(rhSpellInfo);
+        if (!lhName || !rhName)
             return lhSpell.first < rhSpell.first;
 
-        return std::strcmp(lhSpellInfo->SpellName[0], rhSpellInfo->SpellName[0]) > 0;
+        return std::strcmp(lhName, rhName) > 0;
     }
     return lhsKey > rhsKey;
 }
@@ -141,11 +143,19 @@ std::vector<std::pair<uint32, std::string>> ListSpellsAction::GetSpellList(std::
         if (skill != SKILL_NONE && (!skillLine || skillLine->SkillLine != skill))
             continue;
 
-        std::string const comp = spellInfo->SpellName[0];
-        if (!(ignoreList.find(comp) == std::string::npos && alreadySeenList.find(comp) == std::string::npos))
+        char const* localizedName = ChatHelper::GetLocalizedSpellName(spellInfo);
+        std::string const comp = localizedName ? localizedName : "";
+        if (comp.empty() || alreadySeenList.find(comp) != std::string::npos)
             continue;
 
-        if (!filter.empty() && !strstri(spellInfo->SpellName[0], filter.c_str()))
+        // ignoreList holds fixed English literals, so it must be checked against the
+        // enUS name specifically; that slot can be null/empty on single-locale (e.g.
+        // zhTW) DBC data, in which case there's nothing to match against.
+        char const* enUSName = spellInfo->SpellName[LOCALE_enUS];
+        if (enUSName && *enUSName && ignoreList.find(enUSName) != std::string::npos)
+            continue;
+
+        if (!filter.empty() && !strstri(localizedName, filter.c_str()))
             continue;
 
         bool first = true;
@@ -265,7 +275,7 @@ std::vector<std::pair<uint32, std::string>> ListSpellsAction::GetSpellList(std::
             LOG_ERROR("playerbots", "?! {}", itr->first);
 
         spells.emplace_back(itr->first, out.str());
-        alreadySeenList += spellInfo->SpellName[0];
+        alreadySeenList += comp;
         alreadySeenList += ",";
     }
 

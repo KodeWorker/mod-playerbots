@@ -52,10 +52,14 @@ Item* ItemForSpellValue::Calculate()
     if (!(spellInfo->Targets & TARGET_FLAG_ITEM))
         return nullptr;
 
-    if (!strcmpi(spellInfo->SpellName[0], "disenchant"))
+    // These are matched against the enUS name specifically (not the display locale) since
+    // they identify particular spells by their fixed English name; SpellName[LOCALE_enUS]
+    // can be null/empty on single-locale (e.g. zhTW) DBC data, so guard against that.
+    char const* enUSName = spellInfo->SpellName[LOCALE_enUS];
+    if (enUSName && !strcmpi(enUSName, "disenchant"))
         return nullptr;
 
-    if (!strcmpi(spellInfo->SpellName[0], "pick lock"))
+    if (enUSName && !strcmpi(enUSName, "pick lock"))
         return nullptr;
 
     for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; slot++)

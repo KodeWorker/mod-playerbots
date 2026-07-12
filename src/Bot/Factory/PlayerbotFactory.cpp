@@ -464,7 +464,9 @@ void PlayerbotFactory::Init()
             // SpellInfo const* enchantSpell = sSpellMgr->GetSpellInfo(enchant->spellid[0]);
             // if (!enchantSpell)
             //     continue;
-            if (strstr(spellInfo->SpellName[0], "Test"))
+            // "Test" spells are only ever named in enUS; SpellName[LOCALE_enUS] can be
+            // null/empty on single-locale (e.g. zhTW) DBC data, so guard against that.
+            if (spellInfo->SpellName[LOCALE_enUS] && strstr(spellInfo->SpellName[LOCALE_enUS], "Test"))
                 break;
 
             enchantSpellIdCache.push_back(id);

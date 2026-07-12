@@ -417,11 +417,16 @@ std::string const ChatHelper::FormatWorldEntry(int32 entry)
     return out.str();
 }
 
+char const* ChatHelper::GetLocalizedSpellName(SpellInfo const* spellInfo)
+{
+    char const* name = spellInfo->SpellName[sWorld->GetDefaultDbcLocale()];
+    return (name && *name) ? name : spellInfo->SpellName[LOCALE_enUS];
+}
+
 std::string const ChatHelper::FormatSpell(SpellInfo const* spellInfo)
 {
     std::ostringstream out;
-    std::string spellName = spellInfo->SpellName[sWorld->GetDefaultDbcLocale()] ?
-        spellInfo->SpellName[sWorld->GetDefaultDbcLocale()] : spellInfo->SpellName[LOCALE_enUS];
+    std::string spellName = ChatHelper::GetLocalizedSpellName(spellInfo);
     out << "|cffffffff|Hspell:" << spellInfo->Id << "|h[" << spellName << "]|h|r";
     return out.str();
 }
