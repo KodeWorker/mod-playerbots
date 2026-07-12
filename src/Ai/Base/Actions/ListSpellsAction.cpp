@@ -207,12 +207,14 @@ std::vector<std::pair<uint32, std::string>> ListSpellsAction::GetSpellList(std::
 
         std::ostringstream out;
         bool filtered = false;
+        bool isRecipe = false;
         if (skillLine)
         {
             for (uint8 i = 0; i < 3; ++i)
             {
                 if (spellInfo->Effects[i].Effect == SPELL_EFFECT_CREATE_ITEM)
                 {
+                    isRecipe = true;
                     if (ItemTemplate const* proto = sObjectMgr->GetItemTemplate(spellInfo->Effects[i].ItemType))
                     {
                         if (craftsPossible)
@@ -248,7 +250,12 @@ std::vector<std::pair<uint32, std::string>> ListSpellsAction::GetSpellList(std::
 
         out << materials.str();
 
-        if (skillLine && skillLine->SkillLine)
+        // Only real tradeskill recipes (spells that create an item) have meaningful
+        // TrivialSkillLineRankHigh/MinSkillLineRank data. SkillLineAbility.dbc also ties
+        // ordinary class abilities to their class/weapon skill line, so without the
+        // isRecipe guard this incorrectly tagged every spell as "gray" (both thresholds
+        // default to 0, and any SkillValue >= 0 trivially satisfies the gray check).
+        if (skillLine && skillLine->SkillLine && isRecipe)
         {
             uint32 GrayLevel = skillLine->TrivialSkillLineRankHigh;
             uint32 GreenLevel = (skillLine->TrivialSkillLineRankHigh + skillLine->MinSkillLineRank) / 2;
