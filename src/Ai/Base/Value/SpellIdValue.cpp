@@ -33,25 +33,7 @@ uint32 SpellIdValue::Calculate()
     char firstSymbol = tolower(namepart[0]);
     size_t spellLength = wnamepart.length();
 
-    // Callers pass either a hardcoded English literal baked into strategy code (the vast
-    // majority, e.g. AI_VALUE2(uint32, "spell id", "judgement")) or - after resolving a
-    // spell link/ID typed by the master - the spell's name in the display locale. Match
-    // against both the enUS and the localized name so name resolution works regardless
-    // of which one namepart actually is.
-    auto matchesSpellName = [&](SpellInfo const* spellInfo)
-    {
-        char const* enUSName = spellInfo->SpellName[LOCALE_enUS];
-        if (enUSName && *enUSName && tolower(enUSName[0]) == firstSymbol && strlen(enUSName) == spellLength &&
-            Utf8FitTo(enUSName, wnamepart))
-            return true;
-
-        char const* localizedName = ChatHelper::GetLocalizedSpellName(spellInfo);
-        if (localizedName && *localizedName && tolower(localizedName[0]) == firstSymbol &&
-            strlen(localizedName) == spellLength && Utf8FitTo(localizedName, wnamepart))
-            return true;
-
-        return false;
-    };
+    LocaleConstant loc = sWorld->GetDefaultDbcLocale();
 
     std::set<uint32> spellIds;
     for (PlayerSpellMap::iterator itr = bot->GetSpellMap().begin(); itr != bot->GetSpellMap().end(); ++itr)
@@ -79,7 +61,9 @@ uint32 SpellIdValue::Calculate()
             }
         }
 
-        if (!useByItem && !matchesSpellName(spellInfo))
+        char const* spellName = ChatHelper::GetLocalizedSpellName(spellInfo);
+        if (!useByItem && (tolower(spellName[0]) != firstSymbol || strlen(spellName) != spellLength ||
+                           !Utf8FitTo(spellName, wnamepart)))
             continue;
 
         spellIds.insert(spellId);
@@ -101,7 +85,9 @@ uint32 SpellIdValue::Calculate()
             if (spellInfo->Effects[0].Effect == SPELL_EFFECT_LEARN_SPELL)
                 continue;
 
-            if (!matchesSpellName(spellInfo))
+            char const* spellName = ChatHelper::GetLocalizedSpellName(spellInfo);
+            if (tolower(spellName[0]) != firstSymbol || strlen(spellName) != spellLength ||
+                !Utf8FitTo(spellName, wnamepart))
                 continue;
 
             spellIds.insert(spellId);
@@ -209,23 +195,6 @@ uint32 VehicleSpellIdValue::Calculate()
     char firstSymbol = tolower(namepart[0]);
     size_t spellLength = wnamepart.length();
 
-    // See the matching comment in SpellIdValue::Calculate: match against both the enUS
-    // and the localized name, since namepart may be either depending on the caller.
-    auto matchesSpellName = [&](SpellInfo const* spellInfo)
-    {
-        char const* enUSName = spellInfo->SpellName[LOCALE_enUS];
-        if (enUSName && *enUSName && tolower(enUSName[0]) == firstSymbol && strlen(enUSName) == spellLength &&
-            Utf8FitTo(enUSName, wnamepart))
-            return true;
-
-        char const* localizedName = ChatHelper::GetLocalizedSpellName(spellInfo);
-        if (localizedName && *localizedName && tolower(localizedName[0]) == firstSymbol &&
-            strlen(localizedName) == spellLength && Utf8FitTo(localizedName, wnamepart))
-            return true;
-
-        return false;
-    };
-
     Creature* creature = vehicleBase->ToCreature();
     for (uint32 x = 0; x < MAX_CREATURE_SPELLS; ++x)
     {
@@ -237,7 +206,9 @@ uint32 VehicleSpellIdValue::Calculate()
         if (!spellInfo || spellInfo->IsPassive())
             continue;
 
-        if (!matchesSpellName(spellInfo))
+        char const* spellName = ChatHelper::GetLocalizedSpellName(spellInfo);
+        if (tolower(spellName[0]) != firstSymbol || strlen(spellName) != spellLength ||
+            !Utf8FitTo(spellName, wnamepart))
             continue;
 
         return spellId;
