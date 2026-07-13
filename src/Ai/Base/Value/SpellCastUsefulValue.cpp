@@ -54,7 +54,7 @@ bool SpellCastUsefulValue::Calculate()
     if (skipSpells.find(spellid) != skipSpells.end())
         return false;
 
-    std::string const spellName = ChatHelper::GetLocalizedSpellName(spellInfo);
+    std::string const spellName = spellInfo->SpellName[0];
     for (uint32 skipSpellId : skipSpells)
     {
         SpellInfo const* skipSpellInfo = sSpellMgr->GetSpellInfo(skipSpellId);
@@ -62,7 +62,7 @@ bool SpellCastUsefulValue::Calculate()
             continue;
 
         std::wstring wnamepart;
-        if (!Utf8toWStr(ChatHelper::GetLocalizedSpellName(skipSpellInfo), wnamepart))
+        if (!Utf8toWStr(skipSpellInfo->SpellName[0], wnamepart))
             continue;
 
         wstrToLower(wnamepart);

@@ -47,12 +47,6 @@ public:
     static std::string const FormatItem(ItemTemplate const* proto, uint32 count = 0, uint32 total = 0);
     static std::string const FormatQItem(uint32 itemId);
     static std::string const FormatSpell(SpellInfo const* spellInfo);
-    // Returns the spell's name in the server's default DBC locale, falling back to
-    // enUS. Single-locale (non-enUS) game clients such as zhTW only populate their
-    // own locale slot in Spell.dbc, leaving SpellName[LOCALE_enUS] empty - code that
-    // assumes SpellName[0] is always populated will silently fail to match under
-    // those locales.
-    static char const* GetLocalizedSpellName(SpellInfo const* spellInfo);
     static std::string const FormatGameobject(GameObject* go);
     static std::string const FormatWorldobject(WorldObject* wo);
     static std::string const FormatWorldEntry(int32 entry);

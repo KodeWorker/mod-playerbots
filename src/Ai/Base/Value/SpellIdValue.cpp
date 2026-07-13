@@ -23,7 +23,7 @@ uint32 SpellIdValue::Calculate()
     uint32 extractedSpellId = handler.extractSpellId(namepart);
     if (extractedSpellId)
         if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(extractedSpellId))
-            namepart = ChatHelper::GetLocalizedSpellName(spellInfo);
+            namepart = spellInfo->SpellName[0];
 
     std::wstring wnamepart;
     if (!Utf8toWStr(namepart, wnamepart))
@@ -33,7 +33,7 @@ uint32 SpellIdValue::Calculate()
     char firstSymbol = tolower(namepart[0]);
     size_t spellLength = wnamepart.length();
 
-    LocaleConstant loc = sWorld->GetDefaultDbcLocale();
+    LocaleConstant loc = LOCALE_enUS;
 
     std::set<uint32> spellIds;
     for (PlayerSpellMap::iterator itr = bot->GetSpellMap().begin(); itr != bot->GetSpellMap().end(); ++itr)
@@ -61,7 +61,7 @@ uint32 SpellIdValue::Calculate()
             }
         }
 
-        char const* spellName = ChatHelper::GetLocalizedSpellName(spellInfo);
+        char const* spellName = spellInfo->SpellName[loc];
         if (!useByItem && (tolower(spellName[0]) != firstSymbol || strlen(spellName) != spellLength ||
                            !Utf8FitTo(spellName, wnamepart)))
             continue;
@@ -85,7 +85,7 @@ uint32 SpellIdValue::Calculate()
             if (spellInfo->Effects[0].Effect == SPELL_EFFECT_LEARN_SPELL)
                 continue;
 
-            char const* spellName = ChatHelper::GetLocalizedSpellName(spellInfo);
+            char const* spellName = spellInfo->SpellName[loc];
             if (tolower(spellName[0]) != firstSymbol || strlen(spellName) != spellLength ||
                 !Utf8FitTo(spellName, wnamepart))
                 continue;
@@ -185,7 +185,7 @@ uint32 VehicleSpellIdValue::Calculate()
     uint32 extractedSpellId = handler.extractSpellId(namepart);
     if (extractedSpellId)
         if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(extractedSpellId))
-            namepart = ChatHelper::GetLocalizedSpellName(spellInfo);
+            namepart = spellInfo->SpellName[0];
 
     std::wstring wnamepart;
     if (!Utf8toWStr(namepart, wnamepart))
@@ -194,6 +194,8 @@ uint32 VehicleSpellIdValue::Calculate()
     wstrToLower(wnamepart);
     char firstSymbol = tolower(namepart[0]);
     size_t spellLength = wnamepart.length();
+
+    const int loc = LocaleConstant::LOCALE_enUS;
 
     Creature* creature = vehicleBase->ToCreature();
     for (uint32 x = 0; x < MAX_CREATURE_SPELLS; ++x)
@@ -206,7 +208,7 @@ uint32 VehicleSpellIdValue::Calculate()
         if (!spellInfo || spellInfo->IsPassive())
             continue;
 
-        char const* spellName = ChatHelper::GetLocalizedSpellName(spellInfo);
+        char const* spellName = spellInfo->SpellName[loc];
         if (tolower(spellName[0]) != firstSymbol || strlen(spellName) != spellLength ||
             !Utf8FitTo(spellName, wnamepart))
             continue;

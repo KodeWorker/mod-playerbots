@@ -66,11 +66,7 @@ bool TameAction::Execute(Event event)
             if (!familyEntry)
                 continue;
 
-            // Displayed to the master, so use the server's default locale (falling back
-            // to enUS, which single-locale zhTW DBC data leaves empty for every entry).
-            char const* localizedFamilyName = familyEntry->Name[sWorld->GetDefaultDbcLocale()];
-            std::string familyName = (localizedFamilyName && *localizedFamilyName) ? localizedFamilyName
-                                                                                    : familyEntry->Name[LOCALE_enUS];
+            std::string familyName = familyEntry->Name[0];
             if (familyName.empty())
                 continue;
 
@@ -311,19 +307,11 @@ bool TameAction::SetPetByFamily(const std::string& family)
         if (!familyEntry)
             continue;
 
-        // Compare the family name in a case-insensitive way. Accept either the enUS name
-        // (the command convention used elsewhere, e.g. "addclass warrior") or the name in
-        // the server's default locale (what a non-enUS client actually shows the master),
-        // since SpellName[LOCALE_enUS] can be empty on single-locale (e.g. zhTW) DBC data.
-        std::string familyNameEnUS = familyEntry->Name[LOCALE_enUS] ? familyEntry->Name[LOCALE_enUS] : "";
-        std::transform(familyNameEnUS.begin(), familyNameEnUS.end(), familyNameEnUS.begin(), ::tolower);
+        // Compare the family name in a case-insensitive way
+        std::string familyName = familyEntry->Name[0];
+        std::transform(familyName.begin(), familyName.end(), familyName.begin(), ::tolower);
 
-        char const* localizedFamilyName = familyEntry->Name[sWorld->GetDefaultDbcLocale()];
-        std::string familyNameLocalized = localizedFamilyName ? localizedFamilyName : "";
-        std::transform(familyNameLocalized.begin(), familyNameLocalized.end(), familyNameLocalized.begin(),
-                       ::tolower);
-
-        if (familyNameEnUS != lowerFamily && familyNameLocalized != lowerFamily)
+        if (familyName != lowerFamily)
             continue;
 
         // If the creature is exotic, check Beast Mastery talent requirements

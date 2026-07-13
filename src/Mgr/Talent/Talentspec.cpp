@@ -6,7 +6,6 @@
 
 #include "Talentspec.h"
 
-#include "ChatHelper.h"
 #include "Event.h"
 #include "Player.h"
 #include "SpellMgr.h"
@@ -84,8 +83,8 @@ bool TalentSpec::CheckTalents(uint32 level, std::ostringstream* out)
         if (entry.rank > entry.maxRank)
         {
             SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(entry.talentInfo->RankID[0]);
-            *out << "spec is not for this class. " << ChatHelper::GetLocalizedSpellName(spellInfo) << " has "
-                 << (entry.rank - entry.maxRank) << " points above max rank.";
+            *out << "spec is not for this class. " << spellInfo->SpellName[0] << " has " << (entry.rank - entry.maxRank)
+                 << " points above max rank.";
             return false;
         }
 
@@ -107,9 +106,8 @@ bool TalentSpec::CheckTalents(uint32 level, std::ostringstream* out)
                 if (!found)
                 {
                     SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(entry.talentInfo->RankID[0]);
-                    *out << "spec is invalid. Talent:" << ChatHelper::GetLocalizedSpellName(spellInfo)
-                         << " needs: " << ChatHelper::GetLocalizedSpellName(spellInfodep)
-                         << " at rank: " << entry.talentInfo->DependsOnRank;
+                    *out << "spec is invalid. Talent:" << spellInfo->SpellName[0]
+                         << " needs: " << spellInfodep->SpellName[0] << " at rank: " << entry.talentInfo->DependsOnRank;
                     return false;
                 }
             }
@@ -126,8 +124,8 @@ bool TalentSpec::CheckTalents(uint32 level, std::ostringstream* out)
             if (entry.rank > 0 && entry.talentInfo->Row * 5 > points)
             {
                 SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(entry.talentInfo->RankID[0]);
-                *out << "spec is is invalid. Talent " << ChatHelper::GetLocalizedSpellName(spellInfo)
-                     << " is selected with only " << points << " in row below it.";
+                *out << "spec is is invalid. Talent " << spellInfo->SpellName[0] << " is selected with only " << points
+                     << " in row below it.";
                 return false;
             }
 

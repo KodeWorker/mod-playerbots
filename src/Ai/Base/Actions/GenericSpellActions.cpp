@@ -156,7 +156,7 @@ bool CastSpellAction::Execute(Event /*event*/)
             if (!spellInfo)
                 continue;
 
-            std::string const namepart = ChatHelper::GetLocalizedSpellName(spellInfo);
+            std::string const namepart = spellInfo->SpellName[0];
             std::wstring wnamepart;
             if (!Utf8toWStr(namepart, wnamepart))
                 return false;
