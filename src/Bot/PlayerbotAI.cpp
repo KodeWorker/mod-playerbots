@@ -2704,6 +2704,16 @@ std::string PlayerbotAI::GetLocalizedAreaName(const AreaTableEntry* entry)
         name = entry->area_name[sWorld->GetDefaultDbcLocale()];
         if (name.empty())
             name = entry->area_name[LOCALE_enUS];
+
+        // Static zhTW zone-name override, independent of the server's own DBC
+        // locale (sWorld->GetDefaultDbcLocale() reflects whatever locale is
+        // actually populated in the server's own DBC files, which is enUS-only
+        // here). Sourced from a real zhTW client's AreaTable.dbc - see
+        // data/sql/updates/pending_db_world in azerothcore-wotlk (acore_string
+        // entries keyed by AreaID + 900000).
+        if (AcoreString const* as = sObjectMgr->GetAcoreString(900000 + entry->ID))
+            if (as->Content.size() > std::size_t(LOCALE_zhTW) && !as->Content[LOCALE_zhTW].empty())
+                name = as->Content[LOCALE_zhTW];
     }
 
     return name;

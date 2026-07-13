@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <openssl/sha.h>
 #include <iomanip>
@@ -465,6 +466,29 @@ Player* PlayerbotHolder::GetPlayerBot(ObjectGuid::LowType lowGuid) const
     return (it == playerBots.end()) ? 0 : it->second;
 }
 
+namespace
+{
+    // Static zhTW channel-name overrides, independent of the server's own DBC
+    // locale (BroadcastHelper::GetLocale() reflects whatever locale is
+    // actually populated in the server's own DBC files, which is enUS-only
+    // here). Sourced from a real zhTW client's ChatChannels.dbc.
+    std::unordered_map<uint32, char const*> const zhTWChannelPatterns =
+    {
+        { ChatChannelId::GENERAL,            "綜合 - %s" },
+        { ChatChannelId::TRADE,               "交易 - %s" },
+        { ChatChannelId::LOCAL_DEFENSE,       "本地防務 - %s" },
+        { ChatChannelId::WORLD_DEFENSE,       "世界防務" },
+        { ChatChannelId::GUILD_RECRUITMENT,   "公會招募 - %s" },
+        { ChatChannelId::LOOKING_FOR_GROUP,   "尋求組隊" },
+    };
+
+    char const* GetZhTWChannelPattern(uint32 channelId, char const* fallbackPattern)
+    {
+        auto itr = zhTWChannelPatterns.find(channelId);
+        return itr != zhTWChannelPatterns.end() ? itr->second : fallbackPattern;
+    }
+}
+
 void PlayerbotHolder::OnBotLogin(Player* const bot)
 {
     // Prevent duplicate login
@@ -646,7 +670,8 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
                 case ChatChannelId::LOCAL_DEFENSE:
                 {
                     char new_channel_name_buf[100];
-                    snprintf(new_channel_name_buf, 100, channel->pattern[locale], current_zone_name.c_str());
+                    char const* pattern = GetZhTWChannelPattern(channel->ChannelID, channel->pattern[locale]);
+                    snprintf(new_channel_name_buf, 100, pattern, current_zone_name.c_str());
                     new_channel = cMgr->GetJoinChannel(new_channel_name_buf, channel->ChannelID);
                     break;
                 }
@@ -654,18 +679,21 @@ void PlayerbotHolder::OnBotLogin(Player* const bot)
                 case ChatChannelId::GUILD_RECRUITMENT:
                 {
                     char new_channel_name_buf[100];
+                    char const* pattern = GetZhTWChannelPattern(channel->ChannelID, channel->pattern[locale]);
                     //3459 is ID for a zone named "City" (only exists for the sake of using its name)
                     //Currently in magons TBC, if you switch zones, then you join "Trade - <zone>" and "GuildRecruitment - <zone>"
                     //which is a core bug, should be "Trade - City" and "GuildRecruitment - City" in both 1.12 and TBC
                     //but if you (actual player) logout in a city and log back in - you join "City" versions
-                    snprintf(new_channel_name_buf, 100, channel->pattern[locale], GET_PLAYERBOT_AI(bot)->GetLocalizedAreaName(GetAreaEntryByAreaID(3459)).c_str());
+                    std::string cityName = GET_PLAYERBOT_AI(bot)->GetLocalizedAreaName(GetAreaEntryByAreaID(3459));
+                    snprintf(new_channel_name_buf, 100, pattern, cityName.c_str());
                     new_channel = cMgr->GetJoinChannel(new_channel_name_buf, channel->ChannelID);
                     break;
                 }
                 case ChatChannelId::LOOKING_FOR_GROUP:
                 case ChatChannelId::WORLD_DEFENSE:
                 {
-                    new_channel = cMgr->GetJoinChannel(channel->pattern[locale], channel->ChannelID);
+                    char const* pattern = GetZhTWChannelPattern(channel->ChannelID, channel->pattern[locale]);
+                    new_channel = cMgr->GetJoinChannel(pattern, channel->ChannelID);
                     break;
                 }
                 default:
