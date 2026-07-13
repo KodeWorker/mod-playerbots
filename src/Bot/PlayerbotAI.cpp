@@ -3128,9 +3128,19 @@ bool PlayerbotAI::HasAura(std::string const name, Unit* unit, bool maxStack, boo
             if (!spellInfo)
                 continue;
 
-            // Check if the aura name matches
-            std::string_view const auraName = spellInfo->SpellName[0];
-            if (auraName.empty() || auraName.length() != wnamepart.length() || !Utf8FitTo(auraName, wnamepart))
+            // Check if the aura name matches. `name` is either a hardcoded English
+            // literal from strategy code or a localized name, so match against both
+            // the enUS and the display-locale name - SpellName[0] (enUS) can be empty
+            // on single-locale (e.g. zhTW) DBC data.
+            char const* enUSNamePtr = spellInfo->SpellName[LOCALE_enUS];
+            char const* localizedNamePtr = ChatHelper::GetLocalizedSpellName(spellInfo);
+            std::string_view const enUSAuraName = enUSNamePtr ? enUSNamePtr : "";
+            std::string_view const localizedAuraName = localizedNamePtr ? localizedNamePtr : "";
+            bool const matchesEnUS = !enUSAuraName.empty() && enUSAuraName.length() == wnamepart.length() &&
+                                      Utf8FitTo(enUSAuraName, wnamepart);
+            bool const matchesLocalized = !localizedAuraName.empty() && localizedAuraName.length() == wnamepart.length() &&
+                                           Utf8FitTo(localizedAuraName, wnamepart);
+            if (!matchesEnUS && !matchesLocalized)
                 continue;
 
             // Check if this is a valid aura for the bot
@@ -3207,10 +3217,21 @@ Aura* PlayerbotAI::GetAura(std::string const name, Unit* unit, bool checkIsOwner
             if (!spellInfo)
                 continue;
 
-            std::string const& auraName = spellInfo->SpellName[0];
+            // `name` is either a hardcoded English literal from strategy code or a
+            // localized name, so match against both the enUS and the display-locale
+            // name - SpellName[0] (enUS) can be empty on single-locale (e.g. zhTW)
+            // DBC data.
+            char const* enUSNamePtr = spellInfo->SpellName[LOCALE_enUS];
+            char const* localizedNamePtr = ChatHelper::GetLocalizedSpellName(spellInfo);
+            std::string_view const enUSAuraName = enUSNamePtr ? enUSNamePtr : "";
+            std::string_view const localizedAuraName = localizedNamePtr ? localizedNamePtr : "";
+            bool const matchesEnUS = !enUSAuraName.empty() && enUSAuraName.length() == wnamepart.length() &&
+                                      Utf8FitTo(enUSAuraName, wnamepart);
+            bool const matchesLocalized = !localizedAuraName.empty() && localizedAuraName.length() == wnamepart.length() &&
+                                           Utf8FitTo(localizedAuraName, wnamepart);
 
             // Directly skip if name mismatch (both length and content)
-            if (auraName.empty() || auraName.length() != wnamepart.length() || !Utf8FitTo(auraName, wnamepart))
+            if (!matchesEnUS && !matchesLocalized)
                 continue;
 
             if (!IsRealAura(bot, aurEff, unit))
