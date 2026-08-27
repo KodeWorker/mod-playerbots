@@ -79,7 +79,8 @@ public:
 
 // Phase 1: a killed Power Spark leaves a ground buff at its death position (+50% damage to
 // anyone standing in it, SPELL_POWER_SPARK_GROUND_BUFF -- self-cast by the spark, see
-// npc_power_spark::DamageTaken in boss_malygos.cpp). Bots without the buff should walk to it.
+// npc_power_spark::DamageTaken in boss_malygos.cpp). Ranged DPS without the buff should walk
+// to it; melee stays on Malygos instead of chasing a zone often clear across the room.
 class PowerSparkGroundBuffTrigger : public Trigger
 {
 public:
@@ -88,8 +89,9 @@ public:
 };
 
 // Phase 2: standing inside an Arcane Overload's blast radius grants a protective shield
-// (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's AoE damage. Bots without the shield
-// should walk to it instead of avoiding it.
+// (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's AoE damage. Tank-only: the tank walks
+// its current add into a bubble and holds there (everyone else fighting that add follows
+// along), instead of every bot independently chasing whichever bubble is nearest.
 class ArcaneOverloadBubbleTrigger : public Trigger
 {
 public:

@@ -60,7 +60,9 @@ bool PowerSparkGroundBuffTrigger::IsActive()
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 1) { return false; }
-    if (botAI->IsTank(bot)) { return false; }  // stay on the boss, don't chase the buff zone
+    // Ranged DPS only -- melee needs to stay in melee range of Malygos, not wander off to a
+    // buff zone that's often clear across the room from the spark's spawn point.
+    if (!botAI->IsRangedDps(bot)) { return false; }
     if (bot->HasAura(SPELL_POWER_SPARK_GROUND_BUFF)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
@@ -91,7 +93,11 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 2) { return false; }
-    if (botAI->IsTank(bot)) { return false; }  // stay on the Nexus Lord/Scion, don't chase the shield
+    // Tank only -- the tank drags whatever add it's holding into the bubble just by moving
+    // there (the add follows into melee range), so everyone else fighting that add ends up
+    // inside it too. Letting every bot independently chase the nearest bubble instead just
+    // had the raid scatter between different bubbles as new ones spawned.
+    if (!botAI->IsTank(bot)) { return false; }
     if (bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
