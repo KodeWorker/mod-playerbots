@@ -63,7 +63,8 @@ public:
 
 // Phase 2: an unoccupied seat on a Hover Disk grants the boarding player immunity to
 // Arcane Overload / Surge of Power damage (see npc_hover_disk::PassengerBoarded in
-// boss_malygos.cpp). Main tank stays on the ground; everyone else should hop on when one's free.
+// boss_malygos.cpp). Tanks stay on the ground holding the adds; everyone else should hop
+// on when one's free.
 class HoverDiskTrigger : public Trigger
 {
 public:

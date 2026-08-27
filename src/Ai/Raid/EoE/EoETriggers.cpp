@@ -60,6 +60,7 @@ bool PowerSparkGroundBuffTrigger::IsActive()
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 1) { return false; }
+    if (botAI->IsTank(bot)) { return false; }  // stay on the boss, don't chase the buff zone
     if (bot->HasAura(SPELL_POWER_SPARK_GROUND_BUFF)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
@@ -90,6 +91,7 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 2) { return false; }
+    if (botAI->IsTank(bot)) { return false; }  // stay on the Nexus Lord/Scion, don't chase the shield
     if (bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
@@ -118,7 +120,7 @@ bool HoverDiskTrigger::IsActive()
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 2) { return false; }
     if (bot->GetVehicle()) { return false; }
-    if (botAI->IsMainTank(bot)) { return false; }
+    if (botAI->IsTank(bot)) { return false; }  // stay on the ground tanking, don't board the disk
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest vehicles");
     LOG_DEBUG("playerbots", "[EoE debug] {} hover disk scan: phase={} candidates={}",
