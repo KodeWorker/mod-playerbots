@@ -244,6 +244,24 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
     if (!vehicleBase || !masterVehicle) { return false; }
 
     MotionMaster* mm = vehicleBase->GetMotionMaster();
+
+    // Marked for the incoming Surge of Power blast (25man only, see the constant's comment) --
+    // break formation and fly straight out away from the raid instead of staying clumped, so
+    // the AoE doesn't catch everyone else too. Flame Shield uptime is handled separately by
+    // EoEDrakeAttackAction, which already prioritizes it every tick regardless of this.
+    if (vehicleBase->HasAura(SPELL_SURGE_OF_POWER_WARN_SELECTOR_25))
+    {
+        mm->Clear(false);
+        float angle = vehicleBase->GetAngle(masterVehicle) + static_cast<float>(M_PI);
+        float fleeDist = 25.0f;
+        float x = vehicleBase->GetPositionX() + cos(angle) * fleeDist;
+        float y = vehicleBase->GetPositionY() + std::sin(angle) * fleeDist;
+        vehicleBase->SetCanFly(true);
+        mm->MovePoint(0, x, y, vehicleBase->GetPositionZ());
+        vehicleBase->SendMovementFlagUpdate();
+        return true;
+    }
+
     Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
     if (boss && false)
     {
@@ -272,7 +290,9 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
         float angle = botAI->GetGroupSlotIndex(bot) * (2*M_PI - M_PI_2)/numPlayers + M_PI_2;
         // float angle = M_PI;
         vehicleBase->SetCanFly(true);
-        mm->MoveFollow(masterVehicle, 3.0f, angle);
+        // Wide follow radius -- a tight 3yd ring packed the whole raid into one spot, so a
+        // single-target Surge of Power blast (or Static Field) caught everyone at once.
+        mm->MoveFollow(masterVehicle, 15.0f, angle);
         vehicleBase->SendMovementFlagUpdate();
         return true;
     }

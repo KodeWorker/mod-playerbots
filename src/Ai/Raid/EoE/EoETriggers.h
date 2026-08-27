@@ -32,6 +32,11 @@ enum EyeOfEternityIDs
 
     SPELL_ALEXSTRASZA_GIFT              = 61028,
 
+    // Phase 3: 25man warns the marked drake rider with this aura ~3s before the AoE lands
+    // (SPELL_PH3_SURGE_OF_POWER_25) -- 10man has no equivalent detectable marker, only an
+    // internal boss-script GUID and a chat emote to that player, neither queryable here.
+    SPELL_SURGE_OF_POWER_WARN_SELECTOR_25 = 60939,
+
     // Drake Abilities:
     // DPS
     SPELL_FLAME_SPIKE                   = 56091,
