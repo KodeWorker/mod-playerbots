@@ -1,6 +1,7 @@
 #include "Playerbots.h"
 #include "EoEActions.h"
 #include "EoETriggers.h"
+#include "Vehicle.h"
 
 bool MalygosPositionAction::Execute(Event /*event*/)
 {
@@ -78,23 +79,28 @@ bool MalygosTargetAction::Execute(Event /*event*/)
 
         // Init this as boss by default, if no better target is found just fall back to Malygos
         Unit* newTarget = boss;
-        // Unit* spark = nullptr;
+        Unit* spark = nullptr;
 
-        // GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
-        // for (auto& target : targets)
-        // {
-        //     Unit* unit = botAI->GetUnit(target);
-        //     if (unit && unit->GetEntry() == NPC_POWER_SPARK)
-        //     {
-        //         spark = unit;
-        //         break;
-        //     }
-        // }
+        GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
+        for (auto& target : targets)
+        {
+            Unit* unit = botAI->GetUnit(target);
+            // Skip a spark that's already been killed (ground-buff state, non-attackable) --
+            // only chase one still alive and heading for the boss.
+            if (unit && unit->GetEntry() == NPC_POWER_SPARK && !unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+            {
+                spark = unit;
+                break;
+            }
+        }
 
-        // if (spark && botAI->IsRangedDps(bot))
-        // {
-        //     newTarget = spark;
-        // }
+        // Ranged DPS kill the spark before it reaches Malygos -- otherwise it buffs the boss
+        // (SPELL_POWER_SPARK_MALYGOS_BUFF); killing it also leaves a ground buff for the raid
+        // (see PowerSparkGroundBuffTrigger).
+        if (spark && botAI->IsRangedDps(bot))
+        {
+            newTarget = spark;
+        }
 
         Unit* currentTarget = AI_VALUE(Unit*, "current target");
 
@@ -287,6 +293,13 @@ bool EoEDrakeAttackAction::Execute(Event /*event*/)
         return false;
     }
 
+    // Keep Flame Shield up to survive Malygos's periodic Arcane Pulse / Surge of Power damage
+    // while riding the drake -- takes priority over both the DPS and heal rotations below.
+    if (!vehicleBase->HasAura(SPELL_FLAME_SHIELD) && CastDrakeSpellAction(vehicleBase, SPELL_FLAME_SHIELD, 0))
+    {
+        return true;
+    }
+
     // Unit* target = AI_VALUE(Unit*, "current target");
     Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
     // if (!boss) { return false; }
@@ -399,4 +412,65 @@ bool EoEDrakeAttackAction::DrakeHealAction()
         // return CastDrakeSpellAction(target, SPELL_REVIVIFY, 0);
         return botAI->CastVehicleSpell(SPELL_REVIVIFY, vehicleBase);
     }
+}
+
+bool PowerSparkBuffAction::Execute(Event /*event*/)
+{
+    GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
+    for (auto& target : targets)
+    {
+        Unit* unit = botAI->GetUnit(target);
+        if (!unit || unit->GetEntry() != NPC_POWER_SPARK || !unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+        {
+            continue;
+        }
+
+        if (bot->GetDistance2d(unit->GetPositionX(), unit->GetPositionY()) > 3.0f)
+        {
+            return MoveTo(EOE_MAP_ID, unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ(),
+                false, false, false, false, MovementPriority::MOVEMENT_COMBAT);
+        }
+        return false;
+    }
+
+    return false;
+}
+
+bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
+{
+    GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
+    for (auto& target : targets)
+    {
+        Unit* unit = botAI->GetUnit(target);
+        if (!unit || unit->GetEntry() != NPC_ARCANE_OVERLOAD)
+        {
+            continue;
+        }
+
+        if (bot->GetDistance2d(unit->GetPositionX(), unit->GetPositionY()) > 3.0f)
+        {
+            return MoveTo(EOE_MAP_ID, unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ(),
+                false, false, false, false, MovementPriority::MOVEMENT_COMBAT);
+        }
+        return false;
+    }
+
+    return false;
+}
+
+bool EoEHoverDiskAction::Execute(Event /*event*/)
+{
+    GuidVector npcs = AI_VALUE(GuidVector, "nearest vehicles");
+    for (auto& npc : npcs)
+    {
+        Unit* vehicleBase = botAI->GetUnit(npc);
+        if (!vehicleBase || vehicleBase->GetEntry() != NPC_HOVER_DISK) { continue; }
+
+        Vehicle* veh = vehicleBase->GetVehicleKit();
+        if (!veh || !veh->GetAvailableSeatCount()) { continue; }
+
+        if (EnterVehicle(vehicleBase, true)) { return true; }
+    }
+
+    return false;
 }

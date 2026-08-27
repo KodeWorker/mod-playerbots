@@ -51,3 +51,70 @@ bool PowerSparkTrigger::IsActive()
 
     return false;
 }
+
+bool PowerSparkGroundBuffTrigger::IsActive()
+{
+    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    if (!boss) { return false; }
+
+    if (MalygosTrigger::getPhase(bot, boss) != 1) { return false; }
+    if (bot->HasAura(SPELL_POWER_SPARK_GROUND_BUFF)) { return false; }
+
+    GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
+    for (auto& target : targets)
+    {
+        Unit* unit = botAI->GetUnit(target);
+        if (unit && unit->GetEntry() == NPC_POWER_SPARK && unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ArcaneOverloadBubbleTrigger::IsActive()
+{
+    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    if (!boss) { return false; }
+
+    if (MalygosTrigger::getPhase(bot, boss) != 2) { return false; }
+    if (bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION)) { return false; }
+
+    GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
+    for (auto& target : targets)
+    {
+        Unit* unit = botAI->GetUnit(target);
+        if (unit && unit->GetEntry() == NPC_ARCANE_OVERLOAD)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool HoverDiskTrigger::IsActive()
+{
+    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    if (!boss) { return false; }
+
+    if (MalygosTrigger::getPhase(bot, boss) != 2) { return false; }
+    if (bot->GetVehicle()) { return false; }
+    if (botAI->IsMainTank(bot)) { return false; }
+
+    GuidVector targets = AI_VALUE(GuidVector, "nearest vehicles");
+    for (auto& target : targets)
+    {
+        Unit* unit = botAI->GetUnit(target);
+        if (!unit || unit->GetEntry() != NPC_HOVER_DISK) { continue; }
+
+        Vehicle* veh = unit->GetVehicleKit();
+        if (veh && veh->GetAvailableSeatCount())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}

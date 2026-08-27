@@ -13,6 +13,14 @@ void RaidEoEStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
         { NextAction("eoe fly drake", ACTION_NORMAL + 1) }));
     triggers.push_back(new TriggerNode("drake combat",
         { NextAction("eoe drake attack", ACTION_NORMAL + 5) }));
+
+    triggers.push_back(new TriggerNode("eoe hover disk",
+        { NextAction("eoe hover disk", ACTION_MOVE + 2) }));
+
+    triggers.push_back(new TriggerNode("power spark buff",
+        { NextAction("power spark buff", ACTION_MOVE) }));
+    triggers.push_back(new TriggerNode("arcane overload bubble",
+        { NextAction("arcane overload bubble", ACTION_MOVE) }));
 }
 
 void RaidEoEStrategy::InitMultipliers(std::vector<Multiplier*> &multipliers)

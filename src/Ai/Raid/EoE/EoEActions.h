@@ -6,6 +6,7 @@
 #include "MovementActions.h"
 #include "PlayerbotAI.h"
 #include "Playerbots.h"
+#include "VehicleActions.h"
 
 const std::pair<float, float> MALYGOS_MAINTANK_POSITION = {757.0f, 1337.0f};
 const std::pair<float, float> MALYGOS_STACK_POSITION = {755.0f, 1301.0f};
@@ -70,6 +71,33 @@ protected:
     bool CastDrakeSpellAction(Unit* target, uint32 spellId, uint32 cooldown);
     bool DrakeDpsAction(Unit* target);
     bool DrakeHealAction();
+};
+
+// Phase 2: board a Hover Disk (see HoverDiskTrigger) for immunity to Arcane Overload / Surge of Power.
+class EoEHoverDiskAction : public EnterVehicleAction
+{
+public:
+    EoEHoverDiskAction(PlayerbotAI* botAI) : EnterVehicleAction(botAI, "eoe hover disk") {}
+
+    bool Execute(Event event) override;
+};
+
+// Phase 1: walk to a killed Power Spark's ground buff (see PowerSparkGroundBuffTrigger).
+class PowerSparkBuffAction : public MovementAction
+{
+public:
+    PowerSparkBuffAction(PlayerbotAI* botAI) : MovementAction(botAI, "power spark buff") {}
+
+    bool Execute(Event event) override;
+};
+
+// Phase 2: walk into an Arcane Overload's protective blast radius (see ArcaneOverloadBubbleTrigger).
+class ArcaneOverloadBubbleAction : public MovementAction
+{
+public:
+    ArcaneOverloadBubbleAction(PlayerbotAI* botAI) : MovementAction(botAI, "arcane overload bubble") {}
+
+    bool Execute(Event event) override;
 };
 
 #endif

@@ -12,6 +12,12 @@ enum EyeOfEternityIDs
     NPC_NEXUS_LORD                      = 30245,
     NPC_SCION_OF_ETERNITY               = 30249,
     NPC_WYRMREST_SKYTALON               = 30161,
+    NPC_HOVER_DISK                      = 30248,
+    NPC_ARCANE_OVERLOAD                 = 30282,
+
+    SPELL_ARCANE_OVERLOAD                = 56430,
+    SPELL_ARCANE_OVERLOAD_DMG            = 56431,
+    SPELL_ARCANE_OVERLOAD_PROTECTION     = 56438,
 
     SPELL_POWER_SPARK_VISUAL            = 55845,
     SPELL_POWER_SPARK_GROUND_BUFF       = 55852,
@@ -52,6 +58,36 @@ class PowerSparkTrigger : public Trigger
 {
 public:
     PowerSparkTrigger(PlayerbotAI* botAI) : Trigger(botAI, "power spark") {}
+    bool IsActive() override;
+};
+
+// Phase 2: an unoccupied seat on a Hover Disk grants the boarding player immunity to
+// Arcane Overload / Surge of Power damage (see npc_hover_disk::PassengerBoarded in
+// boss_malygos.cpp). Main tank stays on the ground; everyone else should hop on when one's free.
+class HoverDiskTrigger : public Trigger
+{
+public:
+    HoverDiskTrigger(PlayerbotAI* botAI) : Trigger(botAI, "eoe hover disk") {}
+    bool IsActive() override;
+};
+
+// Phase 1: a killed Power Spark leaves a ground buff at its death position (+50% damage to
+// anyone standing in it, SPELL_POWER_SPARK_GROUND_BUFF -- self-cast by the spark, see
+// npc_power_spark::DamageTaken in boss_malygos.cpp). Bots without the buff should walk to it.
+class PowerSparkGroundBuffTrigger : public Trigger
+{
+public:
+    PowerSparkGroundBuffTrigger(PlayerbotAI* botAI) : Trigger(botAI, "power spark buff") {}
+    bool IsActive() override;
+};
+
+// Phase 2: standing inside an Arcane Overload's blast radius grants a protective shield
+// (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's AoE damage. Bots without the shield
+// should walk to it instead of avoiding it.
+class ArcaneOverloadBubbleTrigger : public Trigger
+{
+public:
+    ArcaneOverloadBubbleTrigger(PlayerbotAI* botAI) : Trigger(botAI, "arcane overload bubble") {}
     bool IsActive() override;
 };
 
