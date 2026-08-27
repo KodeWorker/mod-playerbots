@@ -57,14 +57,23 @@ bool PowerSparkGroundBuffTrigger::IsActive()
     Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
     if (!boss) { return false; }
 
-    if (MalygosTrigger::getPhase(bot, boss) != 1) { return false; }
+    uint8 phase = MalygosTrigger::getPhase(bot, boss);
+    if (phase != 1) { return false; }
     if (bot->HasAura(SPELL_POWER_SPARK_GROUND_BUFF)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
+    LOG_DEBUG("playerbots", "[EoE debug] {} power spark buff scan: phase={} candidates={}",
+        bot->GetName(), phase, targets.size());
     for (auto& target : targets)
     {
         Unit* unit = botAI->GetUnit(target);
-        if (unit && unit->GetEntry() == NPC_POWER_SPARK && unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
+        if (!unit) { continue; }
+        if (unit->GetEntry() == NPC_POWER_SPARK)
+        {
+            LOG_DEBUG("playerbots", "[EoE debug] {} found spark {} alive={} flags={}",
+                bot->GetName(), unit->GetGUID().ToString(), unit->IsAlive(), unit->GetUnitFlags());
+        }
+        if (unit->GetEntry() == NPC_POWER_SPARK && unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
         {
             return true;
         }
@@ -78,15 +87,21 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
     Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
     if (!boss) { return false; }
 
-    if (MalygosTrigger::getPhase(bot, boss) != 2) { return false; }
+    uint8 phase = MalygosTrigger::getPhase(bot, boss);
+    if (phase != 2) { return false; }
     if (bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
+    LOG_DEBUG("playerbots", "[EoE debug] {} arcane overload scan: phase={} candidates={}",
+        bot->GetName(), phase, targets.size());
     for (auto& target : targets)
     {
         Unit* unit = botAI->GetUnit(target);
-        if (unit && unit->GetEntry() == NPC_ARCANE_OVERLOAD)
+        if (!unit) { continue; }
+        if (unit->GetEntry() == NPC_ARCANE_OVERLOAD)
         {
+            LOG_DEBUG("playerbots", "[EoE debug] {} found overload {} alive={} flags={}",
+                bot->GetName(), unit->GetGUID().ToString(), unit->IsAlive(), unit->GetUnitFlags());
             return true;
         }
     }
@@ -99,20 +114,28 @@ bool HoverDiskTrigger::IsActive()
     Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
     if (!boss) { return false; }
 
-    if (MalygosTrigger::getPhase(bot, boss) != 2) { return false; }
+    uint8 phase = MalygosTrigger::getPhase(bot, boss);
+    if (phase != 2) { return false; }
     if (bot->GetVehicle()) { return false; }
     if (botAI->IsMainTank(bot)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest vehicles");
+    LOG_DEBUG("playerbots", "[EoE debug] {} hover disk scan: phase={} candidates={}",
+        bot->GetName(), phase, targets.size());
     for (auto& target : targets)
     {
         Unit* unit = botAI->GetUnit(target);
-        if (!unit || unit->GetEntry() != NPC_HOVER_DISK) { continue; }
-
-        Vehicle* veh = unit->GetVehicleKit();
-        if (veh && veh->GetAvailableSeatCount())
+        if (!unit) { continue; }
+        if (unit->GetEntry() == NPC_HOVER_DISK)
         {
-            return true;
+            Vehicle* veh = unit->GetVehicleKit();
+            LOG_DEBUG("playerbots", "[EoE debug] {} found disk {} alive={} hasVehicleKit={} seats={}",
+                bot->GetName(), unit->GetGUID().ToString(), unit->IsAlive(), bool(veh),
+                veh ? (int)veh->GetAvailableSeatCount() : -1);
+            if (veh && veh->GetAvailableSeatCount())
+            {
+                return true;
+            }
         }
     }
 
