@@ -62,6 +62,36 @@ bool MalygosPositionAction::Execute(Event /*event*/)
             return false;
         }
     }
+    else if (phase == 2)
+    {
+        // Tank has its own positioning via ArcaneOverloadBubbleTrigger; ranged/heal don't need
+        // to close melee distance at all.
+        if (botAI->IsTank(bot) || !botAI->IsMelee(bot)) { return false; }
+
+        Unit* addTarget = nullptr;
+        GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
+        for (auto& target : targets)
+        {
+            Unit* unit = botAI->GetUnit(target);
+            if (unit && (unit->GetEntry() == NPC_NEXUS_LORD || unit->GetEntry() == NPC_SCION_OF_ETERNITY))
+            {
+                addTarget = unit;
+                break;
+            }
+        }
+        if (!addTarget) { return false; }
+
+        // While still airborne on its Hover Disk intro flight, the add is unreachable by
+        // normal ground pathfinding -- move toward its ground-projected (x,y) position so
+        // melee is in place the instant it lands, instead of standing still failing to path
+        // to a flying target every tick.
+        if (bot->GetDistance2d(addTarget->GetPositionX(), addTarget->GetPositionY()) > distance)
+        {
+            return MoveTo(EOE_MAP_ID, addTarget->GetPositionX(), addTarget->GetPositionY(), bot->GetPositionZ(),
+                false, false, false, false, MovementPriority::MOVEMENT_COMBAT);
+        }
+        return false;
+    }
 
     return false;
 }
