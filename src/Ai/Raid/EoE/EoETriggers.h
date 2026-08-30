@@ -14,6 +14,7 @@ enum EyeOfEternityIDs
     NPC_WYRMREST_SKYTALON               = 30161,
     NPC_HOVER_DISK                      = 30248,
     NPC_ARCANE_OVERLOAD                 = 30282,
+    NPC_STATIC_FIELD                    = 30592,
 
     SPELL_ARCANE_OVERLOAD                = 56430,
     SPELL_ARCANE_OVERLOAD_DMG            = 56431,

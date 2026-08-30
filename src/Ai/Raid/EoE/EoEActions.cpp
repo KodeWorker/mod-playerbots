@@ -262,6 +262,31 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
         return true;
     }
 
+    // Static Field lands on a random target's position as a stationary hazard that deals
+    // periodic damage to anyone standing in it for ~20s (see EVENT_SPELL_STATIC_FIELD in
+    // boss_malygos.cpp). The generic AvoidAoeAction can't help here -- it repositions the
+    // bot's own player character, but a vehicle passenger's position is locked to the
+    // vehicle, so only the drake's own MotionMaster can actually move it away.
+    GuidVector nearbyNpcs = AI_VALUE(GuidVector, "nearest npcs");
+    for (auto& npc : nearbyNpcs)
+    {
+        Unit* unit = botAI->GetUnit(npc);
+        if (!unit || unit->GetEntry() != NPC_STATIC_FIELD) { continue; }
+
+        float dangerRadius = 15.0f;  // estimate -- radius isn't queryable from this DB
+        if (vehicleBase->GetExactDist2d(unit) > dangerRadius) { continue; }
+
+        mm->Clear(false);
+        float angle = unit->GetAngle(vehicleBase);  // bearing from the hazard toward the bot
+        float fleeDist = dangerRadius + 10.0f;
+        float x = unit->GetPositionX() + cos(angle) * fleeDist;
+        float y = unit->GetPositionY() + std::sin(angle) * fleeDist;
+        vehicleBase->SetCanFly(true);
+        mm->MovePoint(0, x, y, vehicleBase->GetPositionZ());
+        vehicleBase->SendMovementFlagUpdate();
+        return true;
+    }
+
     Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
     if (boss && false)
     {
