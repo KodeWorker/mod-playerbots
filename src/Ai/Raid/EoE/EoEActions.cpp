@@ -441,12 +441,24 @@ bool EoEDrakeAttackAction::Execute(Event /*event*/)
 
 bool EoEDrakeAttackAction::CastDrakeSpellAction(Unit* target, uint32 spellId, uint32 cooldown)
 {
-    if (botAI->CanCastVehicleSpell(spellId, target))
+    bool canCast = botAI->CanCastVehicleSpell(spellId, target);
+    if (canCast)
+    {
         if (botAI->CastVehicleSpell(spellId, target))
         {
             vehicleBase->AddSpellCooldown(spellId, 0, cooldown);
+            LOG_DEBUG("playerbots", "[EoE debug] {} drake spell {} on {} -- CAST OK",
+                bot->GetName(), spellId, target->GetName());
             return true;
         }
+        LOG_DEBUG("playerbots", "[EoE debug] {} drake spell {} on {} -- CanCast true, Cast FAILED",
+            bot->GetName(), spellId, target->GetName());
+    }
+    else
+    {
+        LOG_DEBUG("playerbots", "[EoE debug] {} drake spell {} on {} -- CanCast FALSE",
+            bot->GetName(), spellId, target->GetName());
+    }
     return false;
 }
 
@@ -485,7 +497,10 @@ bool EoEDrakeAttackAction::DrakeHealAction()
         // "botAI->CanCastVehicleSpell()" returns SPELL_FAILED_BAD_TARGETS when targeting drakes.
         // Forcing the cast attempt seems to succeed, not sure what's going on here.
         // return CastDrakeSpellAction(target, SPELL_REVIVIFY, 0);
-        return botAI->CastVehicleSpell(SPELL_REVIVIFY, vehicleBase);
+        bool cast = botAI->CastVehicleSpell(SPELL_REVIVIFY, vehicleBase);
+        LOG_DEBUG("playerbots", "[EoE debug] {} drake spell {} (forced, no CanCast check) -- {}",
+            bot->GetName(), SPELL_REVIVIFY, cast ? "CAST OK" : "Cast FAILED");
+        return cast;
     }
 }
 
