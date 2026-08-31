@@ -163,7 +163,16 @@ bool MalygosTargetAction::Execute(Event /*event*/)
             }
         }
 
-        if (botAI->IsRangedDps(bot) && scionOfEternity)
+        // Riding a Hover Disk (see HoverDiskTrigger/EoEHoverDiskAttackAction) means the
+        // bot's Nexus Lord already died -- that's why the seat was free -- so it's now
+        // airborne specifically to reach the Scion. Without this check the target stays
+        // locked on whatever it had before boarding (the now-dead Lord), and the bot never
+        // gets told to attack anything new -- stuck idle despite the disk flying it into
+        // range, reported live.
+        Unit* diskVehicle = bot->GetVehicleBase();
+        bool onHoverDisk = diskVehicle && diskVehicle->GetEntry() == NPC_HOVER_DISK;
+
+        if ((botAI->IsRangedDps(bot) || onHoverDisk) && scionOfEternity)
         {
             newTarget = scionOfEternity;
         }
