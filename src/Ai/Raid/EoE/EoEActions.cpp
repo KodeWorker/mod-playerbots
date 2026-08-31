@@ -571,15 +571,23 @@ bool EoEHoverDiskAttackAction::Execute(Event /*event*/)
     Unit* vehicleBase = bot->GetVehicleBase();
     if (!vehicleBase) { return false; }
 
-    Unit* scion = nullptr;
-    GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
-    for (auto& target : targets)
+    // Stick with whatever Scion was already committed to, instead of re-picking "first
+    // match" fresh every tick -- when multiple Scions are up at once, unordered scan results
+    // flip-flopped between them, reported live as the disk constantly switching target.
+    Unit* scion = !_targetScion.IsEmpty() ? botAI->GetUnit(_targetScion) : nullptr;
+    if (!scion || !scion->IsInWorld() || !scion->IsAlive() || scion->GetEntry() != NPC_SCION_OF_ETERNITY)
     {
-        Unit* unit = botAI->GetUnit(target);
-        if (unit && unit->GetEntry() == NPC_SCION_OF_ETERNITY)
+        scion = nullptr;
+        GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
+        for (auto& target : targets)
         {
-            scion = unit;
-            break;
+            Unit* unit = botAI->GetUnit(target);
+            if (unit && unit->GetEntry() == NPC_SCION_OF_ETERNITY)
+            {
+                scion = unit;
+                _targetScion = unit->GetGUID();
+                break;
+            }
         }
     }
     if (!scion) { return false; }

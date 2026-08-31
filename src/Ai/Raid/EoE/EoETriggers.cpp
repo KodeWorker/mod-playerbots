@@ -118,48 +118,46 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 2) { return false; }
-    // Only exclude a bot actually riding a vehicle (disk or otherwise) -- ground-targeted
-    // movement wouldn't work for a vehicle passenger anyway, and per the guide Deep Breath
-    // hits "ground players" specifically, so a disk rider should already be safe. Confirmed
-    // live: disk-riding melee should attack only, never diverted for breath/bubble (covered
-    // by this check) -- but ground-based melee (still fighting the Nexus Lord, or between
-    // disks) correctly still takes shelter, and only during the actual breath windup thanks
-    // to the position gate below, not constantly.
+    // Exclude vehicle riders (disk or otherwise) -- ground-targeted movement wouldn't work
+    // for a vehicle passenger anyway, and per the guide Deep Breath hits "ground players"
+    // specifically, so a disk rider should already be safe. Confirmed live: disk-riding melee
+    // should attack only, never diverted for breath/bubble.
     if (bot->GetVehicle()) { return false; }
-    // Healers take shelter too, per the strategy guide and confirmed live -- everyone not on
-    // a disk should hide in the bubble during Deep Breath. The earlier attempt to fix a
-    // healer death by excluding healers outright was the wrong lever: the real problem is
-    // that a hard-cast heal fails outright while the healer is physically moving there, which
-    // instant-cast heals don't suffer from (see EoEActions.h's CastDrakeSpellAction-style
-    // cast-time check, generic version). The class-level heal-priority system already tries
-    // instant options first when they're actually off cooldown -- confirmed live that a death
-    // happened specifically when a healer's instant options (Swiftmend/Wild Growth) were both
-    // still on cooldown at that exact moment, leaving only hard-casts, which then failed to
-    // movement. That's a real cooldown-availability gap, not something to paper over by
-    // pulling healers out of the danger zone instead.
-
-    // Gate on the Deep Breath/Surge of Power windup specifically, instead of reacting any
-    // time the buff happens to be missing -- reported live ("bots did not go bubble when
-    // Malygos shouted"; the previous always-on version was also implicated in dragging
-    // Phase 2 out by pulling bots off their kill target too often). This project has no
-    // chat/yell-listening infrastructure anywhere to react to the actual shout
-    // (SAY_DEEP_BREATH), so the closest reliable proxy is boss position: Malygos moves to
-    // within ~10yd of the room's center and goes idle right before it lands
-    // (EVENT_MOVE_TO_SURGE_OF_POWER in boss_malygos.cpp) -- normal Phase 2 patrol circles at
-    // a much larger radius, so this shouldn't false-positive during ordinary movement.
+    // Everyone else (melee included, confirmed live) takes shelter too, per the strategy
+    // guide's "all the grounded players" -- attacking whatever's in range still happens
+    // alongside this (see "malygos target", a separate non-movement action type that isn't
+    // gated by holding a bubble position), matching the described cadence: head to the
+    // (centrally-spawned) bubble, attack the Lord/Scion if in range, hold until it expires,
+    // move to the next one.
     //
-    // Deliberately NOT gated on already having the protection buff: this trigger needs to
-    // stay active (and its action needs to hold position, see ArcaneOverloadBubbleAction)
-    // for the bot's *entire* time inside the danger window, or a lower-priority action like
-    // "malygos position" reclaims the movement slot the instant the buff lands and walks the
-    // bot back out mid-breath, dropping the (proximity-based) aura before it landed --
-    // reported live ("hide in bubble should stay until the breath ends"). Control only
-    // releases once Malygos actually leaves center.
-    float breathWarningRadius = 20.0f;
-    if (boss->GetDistance2d(MALYGOS_CENTER_POSITION.first, MALYGOS_CENTER_POSITION.second) > breathWarningRadius)
-    {
-        return false;
-    }
+    // Healers specifically: the earlier attempt to fix a healer death by excluding healers
+    // outright was the wrong lever -- the real problem is that a hard-cast heal fails outright
+    // while the healer is physically moving there, which instant-cast heals don't suffer from
+    // (see PlayerbotAI.cpp's CastingTime-gated isMoving() check). The class-level heal-
+    // priority system already tries instant options first when they're actually off cooldown
+    // -- confirmed live that a death happened specifically when a healer's instant options
+    // (Swiftmend/Wild Growth) were both still on cooldown at that exact moment, leaving only
+    // hard-casts, which then failed to movement. That's a real cooldown-availability gap, not
+    // something to paper over by pulling healers out of the danger zone instead.
+
+    // Continuous, not gated to the Deep Breath windup -- per the strategy guide: "All the
+    // grounded players will need to move between the purple bubbles to remain protected from
+    // all the various arcane damage that is happening to the raid." That's general Phase 2
+    // coverage (Scion of Eternity's ongoing random Arcane Barrage included, not just the
+    // periodic Surge of Power burst). An earlier attempt gated this to Malygos being near
+    // room center (the Deep Breath windup specifically) to avoid dragging Phase 2 out by
+    // pulling bots off their kill target too often -- but that left the rest of Phase 2
+    // (most of the time) with zero protection, and this round's death pattern (spread across
+    // ~100k log lines, not one tight burst) matches ongoing unmitigated Barrage damage better
+    // than a single periodic spike. Sticky bubble selection + holding position once sheltered
+    // (added since the original always-on version caused problems) should prevent the
+    // original thrashing this time.
+    //
+    // Deliberately NOT gated on already having the protection buff either: this trigger needs
+    // to stay active (and its action needs to hold position, see ArcaneOverloadBubbleAction)
+    // so a lower-priority action like "malygos position" can't reclaim the movement slot the
+    // instant the buff lands and walk the bot back out, dropping the (proximity-based) aura
+    // early -- reported live ("hide in bubble should stay until the breath ends").
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
     LOG_DEBUG("playerbots", "[EoE debug] {} arcane overload scan: phase={} candidates={}",

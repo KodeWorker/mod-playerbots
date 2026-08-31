@@ -10,9 +10,6 @@
 
 const std::pair<float, float> MALYGOS_MAINTANK_POSITION = {757.0f, 1337.0f};
 const std::pair<float, float> MALYGOS_STACK_POSITION = {755.0f, 1301.0f};
-// Matches CenterPos in boss_malygos.cpp -- Malygos moves to within ~10yd of this point and
-// goes idle right before Deep Breath/Surge of Power lands (EVENT_MOVE_TO_SURGE_OF_POWER).
-const std::pair<float, float> MALYGOS_CENTER_POSITION = {754.395f, 1301.27f};
 
 class MalygosPositionAction : public MovementAction
 {
@@ -101,6 +98,11 @@ public:
     EoEHoverDiskAttackAction(PlayerbotAI* botAI) : MovementAction(botAI, "eoe hover disk combat") {}
 
     bool Execute(Event event) override;
+
+private:
+    // Sticks with whatever Scion was last committed to, instead of re-picking "first match"
+    // fresh every tick -- see the .cpp for why.
+    ObjectGuid _targetScion;
 };
 
 // Phase 2: walk into an Arcane Overload's protective blast radius (see ArcaneOverloadBubbleTrigger).
