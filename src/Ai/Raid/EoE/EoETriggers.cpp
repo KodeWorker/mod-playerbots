@@ -1,5 +1,6 @@
 #include "EoETriggers.h"
 
+#include "EoEActions.h"
 #include "SharedDefines.h"
 #include "Vehicle.h"
 
@@ -113,6 +114,21 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
     // "malygos position" and "eoe hover disk" (see EoEStrategy.cpp).
     if (bot->GetVehicle()) { return false; }
     if (bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION)) { return false; }
+
+    // Gate on the Deep Breath/Surge of Power windup specifically, instead of reacting any
+    // time the buff happens to be missing -- reported live ("bots did not go bubble when
+    // Malygos shouted"; the previous always-on version was also implicated in dragging
+    // Phase 2 out by pulling bots off their kill target too often). This project has no
+    // chat/yell-listening infrastructure anywhere to react to the actual shout
+    // (SAY_DEEP_BREATH), so the closest reliable proxy is boss position: Malygos moves to
+    // within ~10yd of the room's center and goes idle right before it lands
+    // (EVENT_MOVE_TO_SURGE_OF_POWER in boss_malygos.cpp) -- normal Phase 2 patrol circles at
+    // a much larger radius, so this shouldn't false-positive during ordinary movement.
+    float breathWarningRadius = 20.0f;
+    if (boss->GetDistance2d(MALYGOS_CENTER_POSITION.first, MALYGOS_CENTER_POSITION.second) > breathWarningRadius)
+    {
+        return false;
+    }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
     LOG_DEBUG("playerbots", "[EoE debug] {} arcane overload scan: phase={} candidates={}",

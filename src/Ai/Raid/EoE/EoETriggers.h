@@ -93,7 +93,9 @@ public:
 // (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's raid-wide AoE (Deep Breath/Surge of
 // Power/Arcane Storm) -- per the strategy guide, ranged/heal "stack in anti-magic zones" and
 // the tank drags its add in just by moving there. Ground-based melee take shelter too (Deep
-// Breath hits "ground players"); only excluded once actually airborne on a disk.
+// Breath hits "ground players"); only excluded once actually airborne on a disk. Gated on
+// Malygos's position (near room center = the Deep Breath windup) rather than firing any time
+// the buff is missing -- see the .cpp for why.
 class ArcaneOverloadBubbleTrigger : public Trigger
 {
 public:

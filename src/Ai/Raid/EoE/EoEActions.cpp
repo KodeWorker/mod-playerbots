@@ -578,8 +578,10 @@ bool EoEHoverDiskAttackAction::Execute(Event /*event*/)
     }
     if (!scion) { return false; }
 
-    float meleeRange = 5.0f;
-    if (vehicleBase->GetExactDist(scion) > meleeRange)
+    // Ranged riders (HoverDiskTrigger opened boarding to them) should hold spell range and
+    // use their own ranged attacks, not close all the way to melee -- reported live.
+    float engageRange = botAI->IsRangedDps(bot) ? 30.0f : 5.0f;
+    if (vehicleBase->GetExactDist(scion) > engageRange)
     {
         // MoveChase kept reissuing every tick without ever closing the distance to an
         // airborne target (1330 consecutive "OK" for one bot in one test, disk visibly still

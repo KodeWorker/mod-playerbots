@@ -10,6 +10,9 @@
 
 const std::pair<float, float> MALYGOS_MAINTANK_POSITION = {757.0f, 1337.0f};
 const std::pair<float, float> MALYGOS_STACK_POSITION = {755.0f, 1301.0f};
+// Matches CenterPos in boss_malygos.cpp -- Malygos moves to within ~10yd of this point and
+// goes idle right before Deep Breath/Surge of Power lands (EVENT_MOVE_TO_SURGE_OF_POWER).
+const std::pair<float, float> MALYGOS_CENTER_POSITION = {754.395f, 1301.27f};
 
 class MalygosPositionAction : public MovementAction
 {
