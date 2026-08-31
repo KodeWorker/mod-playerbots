@@ -172,13 +172,22 @@ bool MalygosTargetAction::Execute(Event /*event*/)
         Unit* diskVehicle = bot->GetVehicleBase();
         bool onHoverDisk = diskVehicle && diskVehicle->GetEntry() == NPC_HOVER_DISK;
 
-        if ((botAI->IsRangedDps(bot) || onHoverDisk) && scionOfEternity)
+        // Focus the Nexus Lord first with everyone (melee and ranged both) and only pivot to
+        // the Scion once the Lord is dead/not up, instead of splitting the raid's damage
+        // between both targets simultaneously -- reported live ("did not see them nuke then
+        // one-by-one"). A disk rider is airborne specifically because its Lord already died,
+        // so it always goes for the Scion regardless.
+        if (onHoverDisk && scionOfEternity)
         {
             newTarget = scionOfEternity;
         }
-        else
+        else if (nexusLord)
         {
             newTarget = nexusLord;
+        }
+        else
+        {
+            newTarget = scionOfEternity;
         }
 
         if (!newTarget) { return false; }
@@ -616,7 +625,26 @@ bool EoEHoverDiskAction::Execute(Event /*event*/)
         Vehicle* veh = vehicleBase->GetVehicleKit();
         if (!veh || !veh->GetAvailableSeatCount()) { continue; }
 
-        if (EnterVehicle(vehicleBase, true)) { return true; }
+        // 3D distance, not the inherited EnterVehicleAction::EnterVehicle()'s 2D check --
+        // the disk is frequently still elevated (wherever its now-dead pilot left it, or
+        // mid-descent), so a bot standing on the ground directly beneath one read as
+        // "close enough" by a 2D check, attempted the click, and got stuck unable to
+        // actually reach it -- reported live ("mount disk and stick to the ground").
+        float dist3d = bot->GetExactDist(vehicleBase);
+        if (dist3d > 40.0f) { continue; }
+
+        if (dist3d > INTERACTION_DISTANCE)
+        {
+            return MoveTo(vehicleBase);
+        }
+
+        vehicleBase->HandleSpellClick(bot);
+        if (!bot->IsOnVehicle(vehicleBase)) { continue; }
+
+        // Dismount because bots can enter vehicle on mount (same as EnterVehicleAction).
+        WorldPacket emptyPacket;
+        bot->GetSession()->HandleCancelMountAuraOpcode(emptyPacket);
+        return true;
     }
 
     return false;

@@ -79,6 +79,17 @@ bool PowerSparkGroundBuffTrigger::IsActive()
         }
         if (unit->GetEntry() == NPC_POWER_SPARK && unit->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE))
         {
+            // Sparks spawn at the room's four corners (FourSidesPos in boss_malygos.cpp),
+            // often 90+ yards from Malygos -- well past normal ranged spell range. Chasing
+            // one that far means abandoning the fight for a 180+ yard round trip, only to
+            // get pulled straight back to combat range by normal positioning the instant
+            // the buff lands -- reported live as "quickly move away". Only worth it if
+            // reasonably close already.
+            float maxChaseDistance = 50.0f;
+            if (bot->GetDistance2d(unit->GetPositionX(), unit->GetPositionY()) > maxChaseDistance)
+            {
+                continue;
+            }
             return true;
         }
     }
