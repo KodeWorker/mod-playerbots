@@ -344,10 +344,22 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
         // 3/4 of a circle, with frontal cone 90 deg unobstructed
         float angle = botAI->GetGroupSlotIndex(bot) * (2*M_PI - M_PI_2)/numPlayers + M_PI_2;
         // float angle = M_PI;
-        vehicleBase->SetCanFly(true);
         // Wide follow radius -- a tight 3yd ring packed the whole raid into one spot, so a
         // single-target Surge of Power blast (or Static Field) caught everyone at once.
-        mm->MoveFollow(masterVehicle, 15.0f, angle);
+        float followDist = 15.0f;
+
+        // MovePoint to a computed absolute slot, not MoveFollow -- CanCastVehicleSpell()
+        // rejects any drake spell with a real cast time while vehicleBase->isMoving(), and
+        // MoveFollow never truly stops (it's a continuous chase of the master's position, so
+        // isMoving() reads true almost permanently as long as the master keeps flying). That
+        // was silently killing Flame Shield entirely (0% success) and crippling Flame Spike.
+        // MovePoint actually arrives and idles, giving real cast windows between reposition
+        // ticks (still triggered by the same >5yd drift as before).
+        float masterAngle = masterVehicle->GetOrientation();
+        float slotX = masterVehicle->GetPositionX() + cos(masterAngle + angle) * followDist;
+        float slotY = masterVehicle->GetPositionY() + std::sin(masterAngle + angle) * followDist;
+        vehicleBase->SetCanFly(true);
+        mm->MovePoint(0, slotX, slotY, masterVehicle->GetPositionZ());
         vehicleBase->SendMovementFlagUpdate();
         return true;
     }
