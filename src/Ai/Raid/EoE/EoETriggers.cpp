@@ -113,7 +113,6 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
     // an incoming Deep Breath instead of taking cover, so this also takes priority over
     // "malygos position" and "eoe hover disk" (see EoEStrategy.cpp).
     if (bot->GetVehicle()) { return false; }
-    if (bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION)) { return false; }
 
     // Gate on the Deep Breath/Surge of Power windup specifically, instead of reacting any
     // time the buff happens to be missing -- reported live ("bots did not go bubble when
@@ -124,6 +123,14 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
     // within ~10yd of the room's center and goes idle right before it lands
     // (EVENT_MOVE_TO_SURGE_OF_POWER in boss_malygos.cpp) -- normal Phase 2 patrol circles at
     // a much larger radius, so this shouldn't false-positive during ordinary movement.
+    //
+    // Deliberately NOT gated on already having the protection buff: this trigger needs to
+    // stay active (and its action needs to hold position, see ArcaneOverloadBubbleAction)
+    // for the bot's *entire* time inside the danger window, or a lower-priority action like
+    // "malygos position" reclaims the movement slot the instant the buff lands and walks the
+    // bot back out mid-breath, dropping the (proximity-based) aura before it landed --
+    // reported live ("hide in bubble should stay until the breath ends"). Control only
+    // releases once Malygos actually leaves center.
     float breathWarningRadius = 20.0f;
     if (boss->GetDistance2d(MALYGOS_CENTER_POSITION.first, MALYGOS_CENTER_POSITION.second) > breathWarningRadius)
     {

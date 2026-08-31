@@ -557,7 +557,13 @@ bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
         return MoveTo(EOE_MAP_ID, unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ(),
             false, false, false, false, MovementPriority::MOVEMENT_COMBAT);
     }
-    return false;
+
+    // Already sheltered -- hold position (claim the movement slot) rather than returning
+    // false and releasing it back to a lower-priority action like "malygos position", which
+    // would walk the bot back out mid-breath and drop the (proximity-based) protection aura
+    // before the AoE actually lands. The trigger stays active for the bot's whole time in the
+    // danger window (see ArcaneOverloadBubbleTrigger), so this needs to keep winning here too.
+    return true;
 }
 
 bool EoEHoverDiskAttackAction::Execute(Event /*event*/)
