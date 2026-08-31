@@ -93,13 +93,14 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 2) { return false; }
-    // Everyone except non-tank melee -- the strategy guide has ranged/healers "stack in
-    // anti-magic zones" for the raid-wide Deep Breath/Surge of Power damage, and the tank
-    // drags whatever add it's holding in just by moving there. Non-tank melee is excluded:
-    // they're occupied fighting the grounded Nexus Lord, then riding its disk to the Scion
-    // once it dies (see HoverDiskTrigger) -- chasing a bubble too would just pull them off
-    // both.
-    if (botAI->IsMelee(bot) && !botAI->IsTank(bot)) { return false; }
+    // Only exclude a bot actually airborne on a Hover Disk -- ground-targeted movement
+    // wouldn't work for a vehicle passenger anyway, and the guide describes Deep Breath as
+    // hitting "ground players" specifically, so a disk rider should already be safe.
+    // Ground-based melee (still fighting the Nexus Lord, or waiting for a disk) need shelter
+    // just like everyone else -- reported live: bots kept chasing the Scion objective through
+    // an incoming Deep Breath instead of taking cover, so this also takes priority over
+    // "malygos position" and "eoe hover disk" (see EoEStrategy.cpp).
+    if (bot->GetVehicle()) { return false; }
     if (bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");

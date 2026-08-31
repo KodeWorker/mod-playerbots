@@ -92,8 +92,8 @@ public:
 // Phase 2: standing inside an Arcane Overload's blast radius grants a protective shield
 // (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's raid-wide AoE (Deep Breath/Surge of
 // Power/Arcane Storm) -- per the strategy guide, ranged/heal "stack in anti-magic zones" and
-// the tank drags its add in just by moving there. Non-tank melee is excluded (busy on the
-// Nexus Lord, then the disk -- see HoverDiskTrigger).
+// the tank drags its add in just by moving there. Ground-based melee take shelter too (Deep
+// Breath hits "ground players"); only excluded once actually airborne on a disk.
 class ArcaneOverloadBubbleTrigger : public Trigger
 {
 public:
