@@ -81,10 +81,8 @@ bool MalygosPositionAction::Execute(Event /*event*/)
         }
         if (!addTarget) { return false; }
 
-        // While still airborne on its Hover Disk intro flight, the add is unreachable by
-        // normal ground pathfinding -- move toward its ground-projected (x,y) position so
-        // melee is in place the instant it lands, instead of standing still failing to path
-        // to a flying target every tick.
+        // The add is unreachable by ground pathfinding while still airborne on its Hover
+        // Disk intro flight -- move toward its (x,y) so melee is in place the instant it lands.
         if (bot->GetDistance2d(addTarget->GetPositionX(), addTarget->GetPositionY()) > distance)
         {
             return MoveTo(EOE_MAP_ID, addTarget->GetPositionX(), addTarget->GetPositionY(), bot->GetPositionZ(),
@@ -163,20 +161,13 @@ bool MalygosTargetAction::Execute(Event /*event*/)
             }
         }
 
-        // Riding a Hover Disk (see HoverDiskTrigger/EoEHoverDiskAttackAction) means the
-        // bot's Nexus Lord already died -- that's why the seat was free -- so it's now
-        // airborne specifically to reach the Scion. Without this check the target stays
-        // locked on whatever it had before boarding (the now-dead Lord), and the bot never
-        // gets told to attack anything new -- stuck idle despite the disk flying it into
-        // range, reported live.
+        // A disk rider's Nexus Lord already died (that's why the seat was free), so it's
+        // airborne specifically to reach the Scion -- target that regardless of role.
         Unit* diskVehicle = bot->GetVehicleBase();
         bool onHoverDisk = diskVehicle && diskVehicle->GetEntry() == NPC_HOVER_DISK;
 
-        // Focus the Nexus Lord first with everyone (melee and ranged both) and only pivot to
-        // the Scion once the Lord is dead/not up, instead of splitting the raid's damage
-        // between both targets simultaneously -- reported live ("did not see them nuke then
-        // one-by-one"). A disk rider is airborne specifically because its Lord already died,
-        // so it always goes for the Scion regardless.
+        // Focus the Nexus Lord first with everyone, only pivoting to the Scion once the Lord
+        // is dead/not up, instead of splitting damage between both simultaneously.
         if (onHoverDisk && scionOfEternity)
         {
             newTarget = scionOfEternity;
@@ -294,9 +285,7 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
     MotionMaster* mm = vehicleBase->GetMotionMaster();
 
     // Marked for the incoming Surge of Power blast (25man only, see the constant's comment) --
-    // break formation and fly straight out away from the raid instead of staying clumped, so
-    // the AoE doesn't catch everyone else too. Flame Shield uptime is handled separately by
-    // EoEDrakeAttackAction, which already prioritizes it every tick regardless of this.
+    // break formation and fly away from the raid so the AoE doesn't catch everyone else too.
     if (vehicleBase->HasAura(SPELL_SURGE_OF_POWER_WARN_SELECTOR_25))
     {
         mm->Clear(false);
@@ -310,11 +299,9 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
         return true;
     }
 
-    // Static Field lands on a random target's position as a stationary hazard that deals
-    // periodic damage to anyone standing in it for ~20s (see EVENT_SPELL_STATIC_FIELD in
-    // boss_malygos.cpp). The generic AvoidAoeAction can't help here -- it repositions the
-    // bot's own player character, but a vehicle passenger's position is locked to the
-    // vehicle, so only the drake's own MotionMaster can actually move it away.
+    // Static Field is a stationary hazard dealing periodic damage for ~20s
+    // (EVENT_SPELL_STATIC_FIELD in boss_malygos.cpp). The generic AvoidAoeAction repositions
+    // the bot's own character, not the vehicle it's riding, so this has to be handled here.
     GuidVector nearbyNpcs = AI_VALUE(GuidVector, "nearest npcs");
     for (auto& npc : nearbyNpcs)
     {
@@ -362,17 +349,14 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
         // 3/4 of a circle, with frontal cone 90 deg unobstructed
         float angle = botAI->GetGroupSlotIndex(bot) * (2*M_PI - M_PI_2)/numPlayers + M_PI_2;
         // float angle = M_PI;
-        // Wide follow radius -- a tight 3yd ring packed the whole raid into one spot, so a
-        // single-target Surge of Power blast (or Static Field) caught everyone at once.
+        // Wide follow radius -- a tight ring packs the raid into one spot, letting a single
+        // AoE (Surge of Power, Static Field) hit everyone at once.
         float followDist = 15.0f;
 
         // MovePoint to a computed absolute slot, not MoveFollow -- CanCastVehicleSpell()
-        // rejects any drake spell with a real cast time while vehicleBase->isMoving(), and
-        // MoveFollow never truly stops (it's a continuous chase of the master's position, so
-        // isMoving() reads true almost permanently as long as the master keeps flying). That
-        // was silently killing Flame Shield entirely (0% success) and crippling Flame Spike.
-        // MovePoint actually arrives and idles, giving real cast windows between reposition
-        // ticks (still triggered by the same >5yd drift as before).
+        // rejects any spell with a cast time while vehicleBase->isMoving(), and MoveFollow
+        // never truly stops (continuous chase, so isMoving() reads true nearly permanently).
+        // MovePoint actually arrives and idles, giving real cast windows between reposition.
         float masterAngle = masterVehicle->GetOrientation();
         float slotX = masterVehicle->GetPositionX() + cos(masterAngle + angle) * followDist;
         float slotY = masterVehicle->GetPositionY() + std::sin(masterAngle + angle) * followDist;
@@ -398,8 +382,8 @@ bool EoEDrakeAttackAction::Execute(Event /*event*/)
         return false;
     }
 
-    // Keep Flame Shield up to survive Malygos's periodic Arcane Pulse / Surge of Power damage
-    // while riding the drake -- takes priority over both the DPS and heal rotations below.
+    // Keep Flame Shield up against Malygos's periodic Arcane Pulse / Surge of Power damage --
+    // takes priority over both the DPS and heal rotations below.
     if (!vehicleBase->HasAura(SPELL_FLAME_SHIELD) && CastDrakeSpellAction(vehicleBase, SPELL_FLAME_SHIELD, 0))
     {
         return true;
@@ -430,11 +414,6 @@ bool EoEDrakeAttackAction::Execute(Event /*event*/)
         return false;
     }
 
-    // Was sorting the group by raw GUID and assigning whoever landed in the first N indices
-    // to heal, completely independent of actual class/spec -- for 10man that's indices 0-4
-    // (5 of ~9-10 bots) forced to heal by GUID-sort luck alone, regardless of being a rogue,
-    // mage, warlock, etc. Reported live as "all bot drakes go healing". Use the bot's actual
-    // role instead, same as every other targeting/positioning check in this file.
     if (botAI->IsHeal(bot))
     {
         return DrakeHealAction();
@@ -532,8 +511,7 @@ bool PowerSparkBuffAction::Execute(Event /*event*/)
 bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
 {
     // Stick with whatever bubble was already committed to, instead of re-picking "nearest"
-    // fresh every tick -- nearest-first selection flip-flopped between different bubbles as
-    // new ones spawned, reported live as a bot running from bubble to bubble.
+    // fresh every tick and flip-flopping between bubbles as new ones spawn.
     Unit* unit = !_targetBubble.IsEmpty() ? botAI->GetUnit(_targetBubble) : nullptr;
     if (!unit || !unit->IsInWorld() || unit->GetEntry() != NPC_ARCANE_OVERLOAD)
     {
@@ -559,10 +537,8 @@ bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
     }
 
     // Already sheltered -- hold position (claim the movement slot) rather than returning
-    // false and releasing it back to a lower-priority action like "malygos position", which
-    // would walk the bot back out mid-breath and drop the (proximity-based) protection aura
-    // before the AoE actually lands. The trigger stays active for the bot's whole time in the
-    // danger window (see ArcaneOverloadBubbleTrigger), so this needs to keep winning here too.
+    // false and releasing it back to a lower-priority action, which would walk the bot back
+    // out and drop the (proximity-based) protection aura.
     return true;
 }
 
@@ -572,8 +548,7 @@ bool EoEHoverDiskAttackAction::Execute(Event /*event*/)
     if (!vehicleBase) { return false; }
 
     // Stick with whatever Scion was already committed to, instead of re-picking "first
-    // match" fresh every tick -- when multiple Scions are up at once, unordered scan results
-    // flip-flopped between them, reported live as the disk constantly switching target.
+    // match" fresh every tick and flip-flopping when multiple Scions are up at once.
     Unit* scion = !_targetScion.IsEmpty() ? botAI->GetUnit(_targetScion) : nullptr;
     if (!scion || !scion->IsInWorld() || !scion->IsAlive() || scion->GetEntry() != NPC_SCION_OF_ETERNITY)
     {
@@ -592,17 +567,14 @@ bool EoEHoverDiskAttackAction::Execute(Event /*event*/)
     }
     if (!scion) { return false; }
 
-    // Ranged riders (HoverDiskTrigger opened boarding to them) should hold spell range and
-    // use their own ranged attacks, not close all the way to melee -- reported live.
+    // Ranged riders hold spell range and use their own ranged attacks, not melee.
     float engageRange = botAI->IsRangedDps(bot) ? 30.0f : 5.0f;
     if (vehicleBase->GetExactDist(scion) > engageRange)
     {
-        // MoveChase kept reissuing every tick without ever closing the distance to an
-        // airborne target (1330 consecutive "OK" for one bot in one test, disk visibly still
-        // grounded) -- likely just doing ground-based navmesh pathing despite SetCanFly().
-        // MovePoint to the target's raw position is the pattern already proven to work for
-        // actual flight elsewhere in this file (EoEFlyDrakeAction's formation/flee moves,
-        // same as a flying mount), so match it instead.
+        // MovePoint to the target's raw position, not MoveChase -- MoveChase kept reissuing
+        // every tick without ever closing distance to an airborne target (ground-based
+        // navmesh pathing despite SetCanFly()). MovePoint is the pattern proven to work for
+        // actual flight elsewhere in this file (EoEFlyDrakeAction).
         MotionMaster* mm = vehicleBase->GetMotionMaster();
         vehicleBase->SetCanFly(true);
         mm->MovePoint(0, scion->GetPositionX(), scion->GetPositionY(), scion->GetPositionZ());
@@ -610,10 +582,8 @@ bool EoEHoverDiskAttackAction::Execute(Event /*event*/)
         return true;
     }
 
-    // Within range -- the disk's passenger seat isn't known to grant a special attack spell
-    // like the phase 3 drakes do, so just face the target and let the bot's own normal
-    // combat AI take it from here (getting airborne in range at all is the actual point of
-    // boarding, per the strategy guide).
+    // Within range -- the disk's seat has no special attack spell like the phase 3 drakes do,
+    // so just face the target and let the bot's own normal combat AI take it from here.
     vehicleBase->SetFacingToObject(scion);
     return false;
 }
@@ -629,11 +599,9 @@ bool EoEHoverDiskAction::Execute(Event /*event*/)
         Vehicle* veh = vehicleBase->GetVehicleKit();
         if (!veh || !veh->GetAvailableSeatCount()) { continue; }
 
-        // 3D distance, not the inherited EnterVehicleAction::EnterVehicle()'s 2D check --
-        // the disk is frequently still elevated (wherever its now-dead pilot left it, or
-        // mid-descent), so a bot standing on the ground directly beneath one read as
-        // "close enough" by a 2D check, attempted the click, and got stuck unable to
-        // actually reach it -- reported live ("mount disk and stick to the ground").
+        // 3D distance, not the inherited EnterVehicleAction::EnterVehicle()'s 2D check -- the
+        // disk is frequently still elevated (wherever its dead pilot left it, or mid-descent),
+        // so a bot standing on the ground beneath one read as "close enough" on a 2D check.
         float dist3d = bot->GetExactDist(vehicleBase);
         if (dist3d > 40.0f) { continue; }
 

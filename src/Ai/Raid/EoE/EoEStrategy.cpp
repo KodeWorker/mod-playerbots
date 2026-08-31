@@ -21,9 +21,7 @@ void RaidEoEStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(new TriggerNode("power spark buff",
         { NextAction("power spark buff", ACTION_MOVE) }));
-    // Higher than "malygos position" (melee's Nexus Lord approach, ACTION_MOVE) and
-    // "eoe hover disk" (ACTION_MOVE + 2) -- taking shelter from Deep Breath/Surge of Power
-    // wins over continuing to chase the Scion objective, reported live.
+    // Highest movement priority in this phase -- taking shelter wins over combat positioning.
     triggers.push_back(new TriggerNode("arcane overload bubble",
         { NextAction("arcane overload bubble", ACTION_MOVE + 5) }));
 }

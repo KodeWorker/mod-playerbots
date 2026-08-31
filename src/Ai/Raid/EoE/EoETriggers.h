@@ -67,10 +67,9 @@ public:
     bool IsActive() override;
 };
 
-// Phase 2: a Hover Disk's seat frees up once its Nexus Lord/Scion pilot dies. Per the
-// strategy guide, melee DPS should grab it to reach the otherwise-unreachable airborne Scion
-// of Eternity (see HoverDiskCombatTrigger for the actual engage) -- ranged/tank can ride too
-// once melee doesn't need the seat. Healers stay off it and keep healing.
+// Phase 2: a Hover Disk's seat frees up once its Nexus Lord/Scion pilot dies, letting melee
+// reach the otherwise-unreachable airborne Scion (see HoverDiskCombatTrigger for the actual
+// engage). Ranged/tank can ride too; healers stay off it and keep healing.
 class HoverDiskTrigger : public Trigger
 {
 public:
@@ -78,10 +77,9 @@ public:
     bool IsActive() override;
 };
 
-// Phase 1: a killed Power Spark leaves a ground buff at its death position (+50% damage to
-// anyone standing in it, SPELL_POWER_SPARK_GROUND_BUFF -- self-cast by the spark, see
-// npc_power_spark::DamageTaken in boss_malygos.cpp). Ranged DPS without the buff should walk
-// to it; melee stays on Malygos instead of chasing a zone often clear across the room.
+// Phase 1: a killed Power Spark leaves a ground buff at its death position (+50% damage,
+// SPELL_POWER_SPARK_GROUND_BUFF -- self-cast by the spark, see npc_power_spark::DamageTaken
+// in boss_malygos.cpp). Ranged DPS without the buff walk to it; melee stays on Malygos.
 class PowerSparkGroundBuffTrigger : public Trigger
 {
 public:
@@ -90,16 +88,10 @@ public:
 };
 
 // Phase 2: standing inside an Arcane Overload's blast radius grants a protective shield
-// (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's raid-wide AoE, continuously -- per the
-// strategy guide, "all the grounded players will need to move between the purple bubbles to
-// remain protected from all the various arcane damage" (Scion of Eternity's ongoing random
-// Arcane Barrage included, not just the periodic Deep Breath/Surge of Power burst). Everyone
-// grounded participates, melee included (confirmed live) -- attacking whatever's in range
-// still happens alongside this via "malygos target", a separate non-movement action type not
-// gated by holding a bubble position. Only vehicle riders (disk or otherwise) are excluded --
-// attack only. Not gated on already having the buff either, so this keeps holding the
-// movement slot rather than releasing it back to a lower-priority action the instant the buff
-// lands.
+// (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's raid-wide AoE. Per the strategy guide,
+// all grounded players (melee included) continuously shelter between bubbles, moving to a new
+// one as each expires; attacking still happens alongside this. Only vehicle riders are
+// excluded (attack only).
 class ArcaneOverloadBubbleTrigger : public Trigger
 {
 public:

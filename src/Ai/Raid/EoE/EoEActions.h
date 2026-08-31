@@ -73,7 +73,7 @@ protected:
     bool DrakeHealAction();
 };
 
-// Phase 2: board a Hover Disk (see HoverDiskTrigger) for immunity to Arcane Overload / Surge of Power.
+// Phase 2: board a Hover Disk to reach the airborne Scion of Eternity (see HoverDiskTrigger).
 class EoEHoverDiskAction : public EnterVehicleAction
 {
 public:
