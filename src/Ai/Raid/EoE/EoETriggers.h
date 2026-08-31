@@ -67,10 +67,10 @@ public:
     bool IsActive() override;
 };
 
-// Phase 2: an unoccupied seat on a Hover Disk grants the boarding player immunity to
-// Arcane Overload / Surge of Power damage (see npc_hover_disk::PassengerBoarded in
-// boss_malygos.cpp). Tanks stay on the ground holding the adds; everyone else should hop
-// on when one's free.
+// Phase 2: a Hover Disk's seat frees up once its Nexus Lord/Scion pilot dies. Per the
+// strategy guide, melee DPS should grab it to reach the otherwise-unreachable airborne Scion
+// of Eternity (see HoverDiskCombatTrigger for the actual engage). Tank stays on the ground;
+// ranged/heal don't need it.
 class HoverDiskTrigger : public Trigger
 {
 public:
@@ -90,13 +90,23 @@ public:
 };
 
 // Phase 2: standing inside an Arcane Overload's blast radius grants a protective shield
-// (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's AoE damage. Tank-only: the tank walks
-// its current add into a bubble and holds there (everyone else fighting that add follows
-// along), instead of every bot independently chasing whichever bubble is nearest.
+// (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's raid-wide AoE (Deep Breath/Surge of
+// Power/Arcane Storm) -- per the strategy guide, ranged/heal "stack in anti-magic zones" and
+// the tank drags its add in just by moving there. Non-tank melee is excluded (busy on the
+// Nexus Lord, then the disk -- see HoverDiskTrigger).
 class ArcaneOverloadBubbleTrigger : public Trigger
 {
 public:
     ArcaneOverloadBubbleTrigger(PlayerbotAI* botAI) : Trigger(botAI, "arcane overload bubble") {}
+    bool IsActive() override;
+};
+
+// Phase 2: once seated on a Hover Disk (see HoverDiskTrigger), fly it to the Scion of
+// Eternity and engage -- the actual point of boarding, per the strategy guide.
+class HoverDiskCombatTrigger : public Trigger
+{
+public:
+    HoverDiskCombatTrigger(PlayerbotAI* botAI) : Trigger(botAI, "eoe hover disk combat") {}
     bool IsActive() override;
 };
 

@@ -91,6 +91,15 @@ public:
     bool Execute(Event event) override;
 };
 
+// Phase 2: fly a boarded Hover Disk to the Scion of Eternity and engage (see HoverDiskCombatTrigger).
+class EoEHoverDiskAttackAction : public MovementAction
+{
+public:
+    EoEHoverDiskAttackAction(PlayerbotAI* botAI) : MovementAction(botAI, "eoe hover disk combat") {}
+
+    bool Execute(Event event) override;
+};
+
 // Phase 2: walk into an Arcane Overload's protective blast radius (see ArcaneOverloadBubbleTrigger).
 class ArcaneOverloadBubbleAction : public MovementAction
 {

@@ -16,6 +16,8 @@ void RaidEoEStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
 
     triggers.push_back(new TriggerNode("eoe hover disk",
         { NextAction("eoe hover disk", ACTION_MOVE + 2) }));
+    triggers.push_back(new TriggerNode("eoe hover disk combat",
+        { NextAction("eoe hover disk combat", ACTION_MOVE + 2) }));
 
     triggers.push_back(new TriggerNode("power spark buff",
         { NextAction("power spark buff", ACTION_MOVE) }));

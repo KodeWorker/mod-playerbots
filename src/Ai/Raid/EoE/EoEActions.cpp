@@ -548,6 +548,42 @@ bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
     return false;
 }
 
+bool EoEHoverDiskAttackAction::Execute(Event /*event*/)
+{
+    Unit* vehicleBase = bot->GetVehicleBase();
+    if (!vehicleBase) { return false; }
+
+    Unit* scion = nullptr;
+    GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
+    for (auto& target : targets)
+    {
+        Unit* unit = botAI->GetUnit(target);
+        if (unit && unit->GetEntry() == NPC_SCION_OF_ETERNITY)
+        {
+            scion = unit;
+            break;
+        }
+    }
+    if (!scion) { return false; }
+
+    float meleeRange = 5.0f;
+    if (vehicleBase->GetExactDist(scion) > meleeRange)
+    {
+        MotionMaster* mm = vehicleBase->GetMotionMaster();
+        vehicleBase->SetCanFly(true);
+        mm->MoveChase(scion, meleeRange);
+        vehicleBase->SendMovementFlagUpdate();
+        return true;
+    }
+
+    // Within range -- the disk's passenger seat isn't known to grant a special attack spell
+    // like the phase 3 drakes do, so just face the target and let the bot's own normal
+    // combat AI take it from here (getting airborne in range at all is the actual point of
+    // boarding, per the strategy guide).
+    vehicleBase->SetFacingToObject(scion);
+    return false;
+}
+
 bool EoEHoverDiskAction::Execute(Event /*event*/)
 {
     GuidVector npcs = AI_VALUE(GuidVector, "nearest vehicles");

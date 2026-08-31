@@ -93,11 +93,13 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 2) { return false; }
-    // Tank only -- the tank drags whatever add it's holding into the bubble just by moving
-    // there (the add follows into melee range), so everyone else fighting that add ends up
-    // inside it too. Letting every bot independently chase the nearest bubble instead just
-    // had the raid scatter between different bubbles as new ones spawned.
-    if (!botAI->IsTank(bot)) { return false; }
+    // Everyone except non-tank melee -- the strategy guide has ranged/healers "stack in
+    // anti-magic zones" for the raid-wide Deep Breath/Surge of Power damage, and the tank
+    // drags whatever add it's holding in just by moving there. Non-tank melee is excluded:
+    // they're occupied fighting the grounded Nexus Lord, then riding its disk to the Scion
+    // once it dies (see HoverDiskTrigger) -- chasing a bubble too would just pull them off
+    // both.
+    if (botAI->IsMelee(bot) && !botAI->IsTank(bot)) { return false; }
     if (bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
@@ -118,6 +120,12 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
     return false;
 }
 
+bool HoverDiskCombatTrigger::IsActive()
+{
+    Unit* vehicleBase = bot->GetVehicleBase();
+    return (vehicleBase && vehicleBase->GetEntry() == NPC_HOVER_DISK);
+}
+
 bool HoverDiskTrigger::IsActive()
 {
     Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
@@ -126,7 +134,11 @@ bool HoverDiskTrigger::IsActive()
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 2) { return false; }
     if (bot->GetVehicle()) { return false; }
-    if (botAI->IsTank(bot)) { return false; }  // stay on the ground tanking, don't board the disk
+    // Melee DPS only, per the strategy guide -- a disk's seat only frees up once its Nexus
+    // Lord/Scion pilot dies, and the point is reaching the airborne Scion of Eternity that
+    // melee otherwise can't touch. Tank stays grounded on its target; ranged/heal don't need
+    // this at all.
+    if (!botAI->IsMelee(bot) || botAI->IsTank(bot)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest vehicles");
     LOG_DEBUG("playerbots", "[EoE debug] {} hover disk scan: phase={} candidates={}",
