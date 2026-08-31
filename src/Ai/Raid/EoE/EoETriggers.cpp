@@ -105,14 +105,22 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
 
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 2) { return false; }
-    // Only exclude a bot actually airborne on a Hover Disk -- ground-targeted movement
-    // wouldn't work for a vehicle passenger anyway, and the guide describes Deep Breath as
-    // hitting "ground players" specifically, so a disk rider should already be safe.
-    // Ground-based melee (still fighting the Nexus Lord, or waiting for a disk) need shelter
-    // just like everyone else -- reported live: bots kept chasing the Scion objective through
-    // an incoming Deep Breath instead of taking cover, so this also takes priority over
-    // "malygos position" and "eoe hover disk" (see EoEStrategy.cpp).
+    // Only exclude a bot actually riding a vehicle (disk or otherwise) -- ground-targeted
+    // movement wouldn't work for a vehicle passenger anyway, and per the guide Deep Breath
+    // hits "ground players" specifically, so a disk rider should already be safe. Confirmed
+    // live: disk-riding melee should attack only, never diverted for breath/bubble (covered
+    // by this check) -- but ground-based melee (still fighting the Nexus Lord, or between
+    // disks) correctly still takes shelter, and only during the actual breath windup thanks
+    // to the position gate below, not constantly.
     if (bot->GetVehicle()) { return false; }
+    // Healers excluded too -- this action holds/claims the movement slot for the bot's whole
+    // time in the danger window (see the comment further down and ArcaneOverloadBubbleAction),
+    // and a hard-cast spell fails outright while physically moving. A healer chasing/holding
+    // at a bubble at the exact moment someone's critically low can't cast at all -- confirmed
+    // live as a real death (repeated "Casting time and bot is moving" on the healer's own
+    // heals while a party member was low health). Surviving unmitigated Deep Breath damage is
+    // the better trade-off than a healer that goes silent right when it's needed most.
+    if (botAI->IsHeal(bot)) { return false; }
 
     // Gate on the Deep Breath/Surge of Power windup specifically, instead of reacting any
     // time the buff happens to be missing -- reported live ("bots did not go bubble when

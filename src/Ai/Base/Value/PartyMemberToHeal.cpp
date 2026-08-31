@@ -129,6 +129,20 @@ Unit* PartyMemberToHeal::Calculate()
 
 bool PartyMemberToHeal::Check(Unit* player)
 {
+    // Malygos (Eye of Eternity) Hover Disk riders shouldn't be chased for healing -- they're
+    // airborne specifically to reach the Scion of Eternity, and 2D distance/LOS can pass even
+    // while they're actually far off in the air, pulling the healer into chasing an elevated
+    // target instead of settling to actually cast. Entry 30248 is unique to this encounter,
+    // so this is a no-op everywhere else. Requested live ("healer should not heal bots on the
+    // disk").
+    if (Unit* vehicleBase = player->GetVehicleBase())
+    {
+        if (vehicleBase->GetEntry() == 30248)
+        {
+            return false;
+        }
+    }
+
     // return player && player != bot && player->GetMapId() == bot->GetMapId() && player->IsInWorld() &&
     //     ServerFacade::instance().GetDistance2d(bot, player) < (player->IsPlayer() && botAI->IsTank((Player*)player) ? 50.0f
     //     : 40.0f);
