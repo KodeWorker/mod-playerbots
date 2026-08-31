@@ -91,6 +91,19 @@ bool PowerSparkGroundBuffTrigger::IsActive()
             {
                 continue;
             }
+            // Also skip if it's too far from the boss itself (not just from this bot) -- not
+            // worth it if it'd sit outside spell range regardless of who goes for it -- or if
+            // it's too close to the tank position (Malygos's front/head), where Arcane
+            // Breath's cone punishes anyone standing there who isn't the tank. Requested live.
+            if (boss->GetDistance2d(unit->GetPositionX(), unit->GetPositionY()) > maxChaseDistance)
+            {
+                continue;
+            }
+            float minTankDistance = 15.0f;
+            if (unit->GetDistance2d(MALYGOS_MAINTANK_POSITION.first, MALYGOS_MAINTANK_POSITION.second) < minTankDistance)
+            {
+                continue;
+            }
             return true;
         }
     }
@@ -113,14 +126,17 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
     // disks) correctly still takes shelter, and only during the actual breath windup thanks
     // to the position gate below, not constantly.
     if (bot->GetVehicle()) { return false; }
-    // Healers excluded too -- this action holds/claims the movement slot for the bot's whole
-    // time in the danger window (see the comment further down and ArcaneOverloadBubbleAction),
-    // and a hard-cast spell fails outright while physically moving. A healer chasing/holding
-    // at a bubble at the exact moment someone's critically low can't cast at all -- confirmed
-    // live as a real death (repeated "Casting time and bot is moving" on the healer's own
-    // heals while a party member was low health). Surviving unmitigated Deep Breath damage is
-    // the better trade-off than a healer that goes silent right when it's needed most.
-    if (botAI->IsHeal(bot)) { return false; }
+    // Healers take shelter too, per the strategy guide and confirmed live -- everyone not on
+    // a disk should hide in the bubble during Deep Breath. The earlier attempt to fix a
+    // healer death by excluding healers outright was the wrong lever: the real problem is
+    // that a hard-cast heal fails outright while the healer is physically moving there, which
+    // instant-cast heals don't suffer from (see EoEActions.h's CastDrakeSpellAction-style
+    // cast-time check, generic version). The class-level heal-priority system already tries
+    // instant options first when they're actually off cooldown -- confirmed live that a death
+    // happened specifically when a healer's instant options (Swiftmend/Wild Growth) were both
+    // still on cooldown at that exact moment, leaving only hard-casts, which then failed to
+    // movement. That's a real cooldown-availability gap, not something to paper over by
+    // pulling healers out of the danger zone instead.
 
     // Gate on the Deep Breath/Surge of Power windup specifically, instead of reacting any
     // time the buff happens to be missing -- reported live ("bots did not go bubble when
