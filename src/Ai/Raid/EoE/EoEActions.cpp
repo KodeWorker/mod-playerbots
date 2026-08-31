@@ -430,43 +430,16 @@ bool EoEDrakeAttackAction::Execute(Event /*event*/)
         return false;
     }
 
-    uint8 numHealers;
-    bot->GetRaidDifficulty() == RAID_DIFFICULTY_25MAN_NORMAL ? numHealers = 10 : numHealers = 4;
-
-    Group* group = bot->GetGroup();
-    if (!group)
-        return false;
-    std::vector<std::pair<ObjectGuid, Player*>> sortedMembers;
-    for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
-    {
-        Player* member = itr->GetSource();
-        sortedMembers.push_back(std::make_pair(member->GetGUID(), member));
-    }
-    std::sort(sortedMembers.begin(), sortedMembers.end());
-
-    int botIndex = -1;
-    for (size_t i = 0; i < sortedMembers.size(); ++i)
-    {
-        if (sortedMembers[i].first == bot->GetGUID())
-        {
-            botIndex = i;
-            break;
-        }
-    }
-
-    if (botIndex == -1)
-        return false;
-
-    if (botIndex > numHealers)
-    {
-        return DrakeDpsAction(boss);
-    }
-    else
+    // Was sorting the group by raw GUID and assigning whoever landed in the first N indices
+    // to heal, completely independent of actual class/spec -- for 10man that's indices 0-4
+    // (5 of ~9-10 bots) forced to heal by GUID-sort luck alone, regardless of being a rogue,
+    // mage, warlock, etc. Reported live as "all bot drakes go healing". Use the bot's actual
+    // role instead, same as every other targeting/positioning check in this file.
+    if (botAI->IsHeal(bot))
     {
         return DrakeHealAction();
     }
-
-    return false;
+    return DrakeDpsAction(boss);
 }
 
 bool EoEDrakeAttackAction::CastDrakeSpellAction(Unit* target, uint32 spellId, uint32 cooldown)

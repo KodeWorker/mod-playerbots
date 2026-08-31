@@ -146,11 +146,12 @@ bool HoverDiskTrigger::IsActive()
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 2) { return false; }
     if (bot->GetVehicle()) { return false; }
-    // Melee DPS only, per the strategy guide -- a disk's seat only frees up once its Nexus
-    // Lord/Scion pilot dies, and the point is reaching the airborne Scion of Eternity that
-    // melee otherwise can't touch. Tank stays grounded on its target; ranged/heal don't need
-    // this at all.
-    if (!botAI->IsMelee(bot) || botAI->IsTank(bot)) { return false; }
+    // Melee DPS gets first crack, per the strategy guide -- a disk's seat only frees up once
+    // its Nexus Lord/Scion pilot dies, and the point is reaching the airborne Scion that melee
+    // otherwise can't touch. Opened to ranged DPS and tanks too (requested live) so a freed
+    // seat doesn't go to waste once melee doesn't need it -- healers still excluded, they
+    // should keep healing rather than go DPS-flying.
+    if (botAI->IsHeal(bot)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest vehicles");
     LOG_DEBUG("playerbots", "[EoE debug] {} hover disk scan: phase={} candidates={}",

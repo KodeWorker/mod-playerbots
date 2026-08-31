@@ -69,8 +69,8 @@ public:
 
 // Phase 2: a Hover Disk's seat frees up once its Nexus Lord/Scion pilot dies. Per the
 // strategy guide, melee DPS should grab it to reach the otherwise-unreachable airborne Scion
-// of Eternity (see HoverDiskCombatTrigger for the actual engage). Tank stays on the ground;
-// ranged/heal don't need it.
+// of Eternity (see HoverDiskCombatTrigger for the actual engage) -- ranged/tank can ride too
+// once melee doesn't need the seat. Healers stay off it and keep healing.
 class HoverDiskTrigger : public Trigger
 {
 public:
