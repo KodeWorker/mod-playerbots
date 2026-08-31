@@ -107,6 +107,11 @@ public:
     ArcaneOverloadBubbleAction(PlayerbotAI* botAI) : MovementAction(botAI, "arcane overload bubble") {}
 
     bool Execute(Event event) override;
+
+private:
+    // Sticks with whatever bubble was last committed to, instead of re-picking "nearest"
+    // every tick -- see the .cpp for why.
+    ObjectGuid _targetBubble;
 };
 
 #endif

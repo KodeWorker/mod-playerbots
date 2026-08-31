@@ -558,23 +558,32 @@ bool PowerSparkBuffAction::Execute(Event /*event*/)
 
 bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
 {
-    GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
-    for (auto& target : targets)
+    // Stick with whatever bubble was already committed to, instead of re-picking "nearest"
+    // fresh every tick -- nearest-first selection flip-flopped between different bubbles as
+    // new ones spawned, reported live as a bot running from bubble to bubble.
+    Unit* unit = !_targetBubble.IsEmpty() ? botAI->GetUnit(_targetBubble) : nullptr;
+    if (!unit || !unit->IsInWorld() || unit->GetEntry() != NPC_ARCANE_OVERLOAD)
     {
-        Unit* unit = botAI->GetUnit(target);
-        if (!unit || unit->GetEntry() != NPC_ARCANE_OVERLOAD)
+        unit = nullptr;
+        GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
+        for (auto& target : targets)
         {
-            continue;
+            Unit* candidate = botAI->GetUnit(target);
+            if (candidate && candidate->GetEntry() == NPC_ARCANE_OVERLOAD)
+            {
+                unit = candidate;
+                _targetBubble = candidate->GetGUID();
+                break;
+            }
         }
-
-        if (bot->GetDistance2d(unit->GetPositionX(), unit->GetPositionY()) > 3.0f)
-        {
-            return MoveTo(EOE_MAP_ID, unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ(),
-                false, false, false, false, MovementPriority::MOVEMENT_COMBAT);
-        }
-        return false;
     }
+    if (!unit) { return false; }
 
+    if (bot->GetDistance2d(unit->GetPositionX(), unit->GetPositionY()) > 3.0f)
+    {
+        return MoveTo(EOE_MAP_ID, unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ(),
+            false, false, false, false, MovementPriority::MOVEMENT_COMBAT);
+    }
     return false;
 }
 
@@ -599,9 +608,15 @@ bool EoEHoverDiskAttackAction::Execute(Event /*event*/)
     float meleeRange = 5.0f;
     if (vehicleBase->GetExactDist(scion) > meleeRange)
     {
+        // MoveChase kept reissuing every tick without ever closing the distance to an
+        // airborne target (1330 consecutive "OK" for one bot in one test, disk visibly still
+        // grounded) -- likely just doing ground-based navmesh pathing despite SetCanFly().
+        // MovePoint to the target's raw position is the pattern already proven to work for
+        // actual flight elsewhere in this file (EoEFlyDrakeAction's formation/flee moves,
+        // same as a flying mount), so match it instead.
         MotionMaster* mm = vehicleBase->GetMotionMaster();
         vehicleBase->SetCanFly(true);
-        mm->MoveChase(scion, meleeRange);
+        mm->MovePoint(0, scion->GetPositionX(), scion->GetPositionY(), scion->GetPositionZ());
         vehicleBase->SendMovementFlagUpdate();
         return true;
     }
