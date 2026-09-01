@@ -322,20 +322,26 @@ bool EoEFlyDrakeAction::isPossible()
 }
 bool EoEFlyDrakeAction::Execute(Event /*event*/)
 {
-    Player* master = botAI->GetMaster();
-    if (!master) { return false; }
-    Unit* masterVehicle = master->GetVehicleBase();
+    // Not gated on botAI->GetMaster()'s own vehicle status -- this used to require the raid's
+    // real-player master to be mounted on a Skytalon too, which meant one player dismounting
+    // (dying, disconnecting, manually getting off) silently disabled Static Field dodging,
+    // Surge of Power fleeing, and formation positioning for *every* bot in the raid. None of
+    // that logic actually needs the master anymore now that formation is boss-anchored.
     Unit* vehicleBase = bot->GetVehicleBase();
-    if (!vehicleBase || !masterVehicle) { return false; }
+    if (!vehicleBase) { return false; }
+
+    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    if (!boss) { return false; }
 
     MotionMaster* mm = vehicleBase->GetMotionMaster();
 
     // Marked for the incoming Surge of Power blast (25man only, see the constant's comment) --
-    // break formation and fly away from the raid so the AoE doesn't catch everyone else too.
+    // break formation and fly away from the boss (and by extension the raid, which clusters
+    // near it) so the AoE doesn't catch everyone else too.
     if (vehicleBase->HasAura(SPELL_SURGE_OF_POWER_WARN_SELECTOR_25))
     {
         mm->Clear(false);
-        float angle = vehicleBase->GetAngle(masterVehicle) + static_cast<float>(M_PI);
+        float angle = boss->GetAngle(vehicleBase);  // bearing from the boss toward the bot
         float fleeDist = 25.0f;
         float x = vehicleBase->GetPositionX() + cos(angle) * fleeDist;
         float y = vehicleBase->GetPositionY() + std::sin(angle) * fleeDist;
@@ -349,9 +355,6 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
         _hasFormationTarget = false;
         return true;
     }
-
-    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
-    if (!boss) { return false; }
 
     // Static Field is a stationary hazard dealing periodic damage for ~20s
     // (EVENT_SPELL_STATIC_FIELD in boss_malygos.cpp), landing on a random player. Per the
