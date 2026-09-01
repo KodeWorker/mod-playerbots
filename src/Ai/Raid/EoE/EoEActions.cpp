@@ -167,18 +167,16 @@ bool MalygosTargetAction::Execute(Event /*event*/)
         bool onHoverDisk = diskVehicle && diskVehicle->GetEntry() == NPC_HOVER_DISK;
 
         // Focus the Nexus Lord first with everyone, only pivoting to the Scion once the Lord
-        // is dead/not up, instead of splitting damage between both simultaneously.
-        if (onHoverDisk && scionOfEternity)
+        // is dead/not up, instead of splitting damage between both simultaneously. Grounded
+        // tank/melee never fall back to the Scion -- it's airborne and unreachable to them,
+        // and generic combat movement chasing it walks them right out of their bubble.
+        if ((onHoverDisk || botAI->IsRangedDps(bot)) && scionOfEternity && !nexusLord)
         {
             newTarget = scionOfEternity;
         }
         else if (nexusLord)
         {
             newTarget = nexusLord;
-        }
-        else
-        {
-            newTarget = scionOfEternity;
         }
 
         if (!newTarget) { return false; }
