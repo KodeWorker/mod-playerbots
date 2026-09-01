@@ -536,10 +536,15 @@ bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
             false, false, false, false, MovementPriority::MOVEMENT_COMBAT);
     }
 
-    // Already sheltered -- hold position (claim the movement slot) rather than returning
-    // false and releasing it back to a lower-priority action, which would walk the bot back
-    // out and drop the (proximity-based) protection aura.
-    return true;
+    // Already sheltered and nothing to move -- return false so lower-priority actions (heal
+    // spells, attacks) still get a turn this tick. This action, its trigger, and every other
+    // action/trigger in this strategy all share one unified per-tick priority queue where only
+    // one action executes -- returning true here to "hold the slot" when there was no actual
+    // movement to make silenced every heal spell (all pushed below this action's priority)
+    // for as long as any bubble existed nearby, which is effectively the whole fight. Whatever
+    // occasionally displaces a sheltered bot (e.g. "malygos position") is a smaller cost than
+    // that.
+    return false;
 }
 
 bool EoEHoverDiskAttackAction::Execute(Event /*event*/)
