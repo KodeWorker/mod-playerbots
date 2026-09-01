@@ -3,6 +3,39 @@
 #include "EoETriggers.h"
 #include "Vehicle.h"
 
+namespace
+{
+    // Shared between MalygosTargetAction and EoEHoverDiskAttackAction, keyed by rider, so a
+    // disk rider's attack target and flight target always agree on which Scion to engage --
+    // picking independently let a rider fly toward one Scion while shooting at another.
+    std::unordered_map<ObjectGuid, ObjectGuid> sDiskRiderScion;
+
+    Unit* GetOrPickRiderScion(PlayerbotAI* botAI, Player* bot)
+    {
+        ObjectGuid botGuid = bot->GetGUID();
+        auto it = sDiskRiderScion.find(botGuid);
+        Unit* scion = (it != sDiskRiderScion.end()) ? botAI->GetUnit(it->second) : nullptr;
+        if (!scion || !scion->IsInWorld() || !scion->IsAlive() || scion->GetEntry() != NPC_SCION_OF_ETERNITY)
+        {
+            scion = nullptr;
+            // Not using the AI_VALUE macro here -- it expands against a "context" member that
+            // only exists inside Action subclasses, and this is a free function.
+            GuidVector targets = botAI->GetAiObjectContext()->GetValue<GuidVector>("possible targets no los")->Get();
+            for (auto& target : targets)
+            {
+                Unit* unit = botAI->GetUnit(target);
+                if (unit && unit->GetEntry() == NPC_SCION_OF_ETERNITY)
+                {
+                    scion = unit;
+                    sDiskRiderScion[botGuid] = unit->GetGUID();
+                    break;
+                }
+            }
+        }
+        return scion;
+    }
+}
+
 bool MalygosPositionAction::Execute(Event /*event*/)
 {
     Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
@@ -166,11 +199,21 @@ bool MalygosTargetAction::Execute(Event /*event*/)
         Unit* diskVehicle = bot->GetVehicleBase();
         bool onHoverDisk = diskVehicle && diskVehicle->GetEntry() == NPC_HOVER_DISK;
 
+        if (onHoverDisk)
+        {
+            // Never fall back to a grounded Lord even if one is still alive elsewhere --
+            // it's out of the disk's reach (no melee, and its own Nexus Lord is already
+            // dead), but LoS to it from the air usually succeeds, so without this a rider
+            // would lock onto an unreachable Lord instead of the Scion it's flying toward.
+            // Use the same Scion EoEHoverDiskAttackAction is flying toward, not a fresh
+            // pick, so attack target and flight target never disagree.
+            newTarget = GetOrPickRiderScion(botAI, bot);
+        }
         // Focus the Nexus Lord first with everyone, only pivoting to the Scion once the Lord
         // is dead/not up, instead of splitting damage between both simultaneously. Grounded
         // tank/melee never fall back to the Scion -- it's airborne and unreachable to them,
         // and generic combat movement chasing it walks them right out of their bubble.
-        if ((onHoverDisk || botAI->IsRangedDps(bot)) && scionOfEternity && !nexusLord)
+        else if (botAI->IsRangedDps(bot) && scionOfEternity && !nexusLord)
         {
             newTarget = scionOfEternity;
         }
@@ -550,24 +593,9 @@ bool EoEHoverDiskAttackAction::Execute(Event /*event*/)
     Unit* vehicleBase = bot->GetVehicleBase();
     if (!vehicleBase) { return false; }
 
-    // Stick with whatever Scion was already committed to, instead of re-picking "first
-    // match" fresh every tick and flip-flopping when multiple Scions are up at once.
-    Unit* scion = !_targetScion.IsEmpty() ? botAI->GetUnit(_targetScion) : nullptr;
-    if (!scion || !scion->IsInWorld() || !scion->IsAlive() || scion->GetEntry() != NPC_SCION_OF_ETERNITY)
-    {
-        scion = nullptr;
-        GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
-        for (auto& target : targets)
-        {
-            Unit* unit = botAI->GetUnit(target);
-            if (unit && unit->GetEntry() == NPC_SCION_OF_ETERNITY)
-            {
-                scion = unit;
-                _targetScion = unit->GetGUID();
-                break;
-            }
-        }
-    }
+    // Shared with MalygosTargetAction so this rider's flight target and attack target
+    // always agree on the same Scion.
+    Unit* scion = GetOrPickRiderScion(botAI, bot);
     if (!scion) { return false; }
 
     // Ranged riders hold spell range and use their own ranged attacks, not melee.

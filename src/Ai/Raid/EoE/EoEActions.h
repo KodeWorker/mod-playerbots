@@ -98,11 +98,6 @@ public:
     EoEHoverDiskAttackAction(PlayerbotAI* botAI) : MovementAction(botAI, "eoe hover disk combat") {}
 
     bool Execute(Event event) override;
-
-private:
-    // Sticks with whatever Scion was last committed to, instead of re-picking "first match"
-    // fresh every tick -- see the .cpp for why.
-    ObjectGuid _targetScion;
 };
 
 // Phase 2: walk into an Arcane Overload's protective blast radius (see ArcaneOverloadBubbleTrigger).
