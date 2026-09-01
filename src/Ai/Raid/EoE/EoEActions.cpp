@@ -363,46 +363,39 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
         return true;
     }
 
+    // Per the strategy guide: "all drakes group up on one spot, roughly level with Malygos...
+    // at least 30 yards away, and close enough to use Flame Spike" -- a tight cluster anchored
+    // on the boss, not a wide ring around a peer bot. Surge of Power (single-target beam) and
+    // Static Field (a fixed puddle, dodged above) aren't clump punishers here, so there's no
+    // reason to spread out the way phase 2's bubbles required.
     Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
-    if (boss && false)
+    if (!boss) { return false; }
+
+    int32 numPlayers = bot->GetRaidDifficulty() == RAID_DIFFICULTY_25MAN_NORMAL ? 25 : 10;
+    float engageRange = 40.0f;     // comfortably past the 30yd minimum, within Flame Spike range
+    float clusterRadius = 6.0f;    // tight grouping, just enough to avoid literal stacking
+    float clusterAngle = botAI->GetGroupSlotIndex(bot) * (2.0f * static_cast<float>(M_PI)) / numPlayers;
+    float idealX = boss->GetPositionX() + engageRange + cos(clusterAngle) * clusterRadius;
+    float idealY = boss->GetPositionY() + std::sin(clusterAngle) * clusterRadius;
+
+    // Re-aim only when meaningfully off-slot, not every tick -- MovePoint toward a target
+    // recalculated fresh every tick (the boss orbits continuously) never let the drake actually
+    // arrive and go idle. isMoving() then read true almost permanently, which silently blocked
+    // every cast-time drake spell via CanCastVehicleSpell()'s moving check -- Flame Shield
+    // (a real 30s-cooldown defensive, not a maintenance buff -- see EoEDrakeAttackAction)
+    // included; the whole encounter logged zero successful casts of it before this fix.
+    bool driftedFromLastAim = !_hasFormationTarget ||
+        std::sqrt(std::pow(idealX - _formationTargetX, 2.0f) + std::pow(idealY - _formationTargetY, 2.0f)) > 15.0f;
+    bool settledButOffSlot = !vehicleBase->isMoving() &&
+        vehicleBase->GetExactDist2d(idealX, idealY) > clusterRadius + 5.0f;
+
+    if (driftedFromLastAim || settledButOffSlot)
     {
-        // Handle as boss encounter instead of formation flight
-        mm->Clear(false);
-        float distance = vehicleBase->GetExactDist(boss);
-        float range = 55.0f;    // Drake range is 60yd
-        if (distance > range)
-        {
-            mm->MoveForwards(boss, range - distance);
-            vehicleBase->SendMovementFlagUpdate();
-            return true;
-        }
-
-        vehicleBase->SetFacingToObject(boss);
-        mm->MoveIdle();
-        vehicleBase->SendMovementFlagUpdate();
-        return false;
-    }
-
-    if (vehicleBase->GetExactDist(masterVehicle) > 5.0f)
-    {
-        uint8 numPlayers;
-        bot->GetRaidDifficulty() == RAID_DIFFICULTY_25MAN_NORMAL ? numPlayers = 25 : numPlayers = 10;
-        // 3/4 of a circle, with frontal cone 90 deg unobstructed
-        float angle = botAI->GetGroupSlotIndex(bot) * (2*M_PI - M_PI_2)/numPlayers + M_PI_2;
-        // float angle = M_PI;
-        // Wide follow radius -- a tight ring packs the raid into one spot, letting a single
-        // AoE (Surge of Power, Static Field) hit everyone at once.
-        float followDist = 15.0f;
-
-        // MovePoint to a computed absolute slot, not MoveFollow -- CanCastVehicleSpell()
-        // rejects any spell with a cast time while vehicleBase->isMoving(), and MoveFollow
-        // never truly stops (continuous chase, so isMoving() reads true nearly permanently).
-        // MovePoint actually arrives and idles, giving real cast windows between reposition.
-        float masterAngle = masterVehicle->GetOrientation();
-        float slotX = masterVehicle->GetPositionX() + cos(masterAngle + angle) * followDist;
-        float slotY = masterVehicle->GetPositionY() + std::sin(masterAngle + angle) * followDist;
+        _hasFormationTarget = true;
+        _formationTargetX = idealX;
+        _formationTargetY = idealY;
         vehicleBase->SetCanFly(true);
-        mm->MovePoint(0, slotX, slotY, masterVehicle->GetPositionZ());
+        mm->MovePoint(0, idealX, idealY, boss->GetPositionZ());
         vehicleBase->SendMovementFlagUpdate();
         return true;
     }
@@ -423,8 +416,13 @@ bool EoEDrakeAttackAction::Execute(Event /*event*/)
         return false;
     }
 
-    // Keep Flame Shield up against Malygos's periodic Arcane Pulse / Surge of Power damage --
-    // takes priority over both the DPS and heal rotations below.
+    // Flame Shield is a reactive defensive with a real 30s cooldown (the server enforces it via
+    // HasSpellCooldown inside CanCastVehicleSpell -- the 0 below is just our own no-op extra
+    // tracking), not a maintenance buff -- per the guide, the player marked by Surge of Power
+    // "MUST use Flame Shield or risk dying". SPELL_SURGE_OF_POWER_WARN_SELECTOR_25 (25man only)
+    // is checked here implicitly by trying every tick: whoever gets marked casts it the moment
+    // the aura lands, since this is the first thing tried each tick. 10man has no detectable
+    // marker, so recasting on cooldown whenever missing is the best available baseline there.
     if (!vehicleBase->HasAura(SPELL_FLAME_SHIELD) && CastDrakeSpellAction(vehicleBase, SPELL_FLAME_SHIELD, 0))
     {
         return true;

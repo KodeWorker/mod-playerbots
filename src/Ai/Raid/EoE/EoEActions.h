@@ -56,6 +56,16 @@ public:
 
     bool Execute(Event event) override;
     bool isPossible() override;
+
+private:
+    // Last formation point actually commanded via MovePoint, and whether one has been set yet.
+    // Re-issuing a fresh MovePoint every tick toward a constantly-recalculated slot never let
+    // the drake settle (isMoving() stayed true almost permanently), silently blocking every
+    // cast-time drake spell -- Flame Shield included. See the .cpp for the hysteresis this
+    // enables.
+    bool _hasFormationTarget = false;
+    float _formationTargetX = 0.0f;
+    float _formationTargetY = 0.0f;
 };
 
 class EoEDrakeAttackAction : public Action
