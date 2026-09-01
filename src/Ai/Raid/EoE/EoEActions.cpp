@@ -337,6 +337,11 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
         vehicleBase->SetCanFly(true);
         mm->MovePoint(0, x, y, vehicleBase->GetPositionZ());
         vehicleBase->SendMovementFlagUpdate();
+        // Invalidate the last commanded cluster point -- once the mark clears (or on the very
+        // next tick otherwise), the formation logic below unconditionally re-aims and rejoins
+        // the pack immediately, instead of waiting on the settled-but-off-slot distance check
+        // to notice the drift from this detour.
+        _hasFormationTarget = false;
         return true;
     }
 
@@ -371,6 +376,10 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
             vehicleBase->SetCanFly(true);
             mm->MovePoint(0, x, y, vehicleBase->GetPositionZ());
             vehicleBase->SendMovementFlagUpdate();
+            // Same reasoning as the Surge of Power branch above -- rejoin the (now-shifted)
+            // cluster immediately once out of immediate danger, instead of waiting on the
+            // distance check.
+            _hasFormationTarget = false;
             return true;
         }
     }
