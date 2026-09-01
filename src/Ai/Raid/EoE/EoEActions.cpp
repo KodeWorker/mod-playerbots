@@ -551,23 +551,40 @@ bool PowerSparkBuffAction::Execute(Event /*event*/)
 
 bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
 {
-    // Stick with whatever bubble was already committed to, instead of re-picking "nearest"
-    // fresh every tick and flip-flopping between bubbles as new ones spawn.
+    // Stick with whatever bubble was already committed to, instead of re-picking fresh every
+    // tick and flip-flopping between bubbles as new ones spawn.
     Unit* unit = !_targetBubble.IsEmpty() ? botAI->GetUnit(_targetBubble) : nullptr;
     if (!unit || !unit->IsInWorld() || unit->GetEntry() != NPC_ARCANE_OVERLOAD)
     {
         unit = nullptr;
+    }
+
+    // A bubble's protective radius shrinks continuously over its ~45s life (and up to 3 can be
+    // alive at once, given the ~15s respawn cadence -- see boss_malygos.cpp), so being close to
+    // its spawn point doesn't mean the buff is still reachable there. If we're at the old 3yd
+    // proximity mark but still lack the actual buff, this one's radius has likely shrunk past
+    // us -- drop it and pick a fresher one below instead of standing still uselessly.
+    if (unit && bot->GetDistance2d(unit->GetPositionX(), unit->GetPositionY()) <= 3.0f &&
+        !bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION))
+    {
+        unit = nullptr;
+    }
+
+    if (!unit)
+    {
+        // Prefer the most recently spawned bubble (highest GUID counter) -- it has the most
+        // radius left before it decays to nothing.
         GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
         for (auto& target : targets)
         {
             Unit* candidate = botAI->GetUnit(target);
-            if (candidate && candidate->GetEntry() == NPC_ARCANE_OVERLOAD)
+            if (candidate && candidate->GetEntry() == NPC_ARCANE_OVERLOAD &&
+                (!unit || candidate->GetGUID().GetCounter() > unit->GetGUID().GetCounter()))
             {
                 unit = candidate;
-                _targetBubble = candidate->GetGUID();
-                break;
             }
         }
+        if (unit) { _targetBubble = unit->GetGUID(); }
     }
     if (!unit) { return false; }
 
@@ -577,14 +594,8 @@ bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
             false, false, false, false, MovementPriority::MOVEMENT_COMBAT);
     }
 
-    // Already sheltered and nothing to move -- return false so lower-priority actions (heal
-    // spells, attacks) still get a turn this tick. This action, its trigger, and every other
-    // action/trigger in this strategy all share one unified per-tick priority queue where only
-    // one action executes -- returning true here to "hold the slot" when there was no actual
-    // movement to make silenced every heal spell (all pushed below this action's priority)
-    // for as long as any bubble existed nearby, which is effectively the whole fight. Whatever
-    // occasionally displaces a sheltered bot (e.g. "malygos position") is a smaller cost than
-    // that.
+    // Already there and the buff-check above didn't reject it -- nothing to move. Return false
+    // so lower-priority actions (attacks, heals) still get a turn this tick.
     return false;
 }
 

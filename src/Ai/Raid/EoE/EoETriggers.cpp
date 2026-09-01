@@ -108,12 +108,12 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
     uint8 phase = MalygosTrigger::getPhase(bot, boss);
     if (phase != 2) { return false; }
     // Vehicle riders attack only (already safe from Deep Breath, "hits ground players").
-    // Everyone else -- melee included -- shelters continuously, per the guide: "all the
-    // grounded players will need to move between the purple bubbles to remain protected".
-    // Attacking still happens alongside this via "malygos target" (a separate, non-movement
-    // action). Not gated on already having the buff either, so this keeps holding the
-    // movement slot instead of releasing it the instant the buff lands.
     if (bot->GetVehicle()) { return false; }
+    // Gated on the actual protection buff, not proximity to a bubble -- its radius shrinks
+    // continuously over its ~45s life (see ArcaneOverloadBubbleAction), so "close to one" and
+    // "actually protected" can diverge. Already-protected bots skip this and keep fighting
+    // instead of wandering between bubbles for no gain.
+    if (bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION)) { return false; }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
     LOG_DEBUG("playerbots", "[EoE debug] {} arcane overload scan: phase={} candidates={}",

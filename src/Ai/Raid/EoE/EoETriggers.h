@@ -88,10 +88,9 @@ public:
 };
 
 // Phase 2: standing inside an Arcane Overload's blast radius grants a protective shield
-// (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's raid-wide AoE. Per the strategy guide,
-// all grounded players (melee included) continuously shelter between bubbles, moving to a new
-// one as each expires; attacking still happens alongside this. Only vehicle riders are
-// excluded (attack only).
+// (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's raid-wide AoE. Active only while a
+// grounded (non-vehicle) bot lacks that buff -- see ArcaneOverloadBubbleAction for why
+// proximity alone doesn't mean protected.
 class ArcaneOverloadBubbleTrigger : public Trigger
 {
 public:
