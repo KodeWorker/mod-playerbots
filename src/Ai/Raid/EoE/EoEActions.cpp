@@ -101,12 +101,17 @@ bool MalygosPositionAction::Execute(Event /*event*/)
         // to close melee distance at all.
         if (botAI->IsTank(bot) || !botAI->IsMelee(bot)) { return false; }
 
+        // Nexus Lord only -- same reasoning as MalygosTargetAction: the Scion is airborne and
+        // unreachable to grounded melee. This action used to grab whichever add came first in
+        // the list, so melee could get sent walking toward the Scion's (x,y) forever, stuck
+        // chasing a target they could never reach instead of boarding a Hover Disk or
+        // sheltering in a bubble.
         Unit* addTarget = nullptr;
         GuidVector targets = AI_VALUE(GuidVector, "possible targets no los");
         for (auto& target : targets)
         {
             Unit* unit = botAI->GetUnit(target);
-            if (unit && (unit->GetEntry() == NPC_NEXUS_LORD || unit->GetEntry() == NPC_SCION_OF_ETERNITY))
+            if (unit && unit->GetEntry() == NPC_NEXUS_LORD)
             {
                 addTarget = unit;
                 break;
