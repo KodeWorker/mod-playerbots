@@ -340,43 +340,55 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
         return true;
     }
 
+    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
+    if (!boss) { return false; }
+
     // Static Field is a stationary hazard dealing periodic damage for ~20s
-    // (EVENT_SPELL_STATIC_FIELD in boss_malygos.cpp). The generic AvoidAoeAction repositions
-    // the bot's own character, not the vehicle it's riding, so this has to be handled here.
+    // (EVENT_SPELL_STATIC_FIELD in boss_malygos.cpp), landing on a random player. Per the
+    // strategy guide, the whole group relocates together when it lands, not just whoever it
+    // happened to land on -- staying stacked is what makes AoE healing effective, so splitting
+    // off individually defeats the point. Detected once here and used to steer the shared
+    // formation anchor below; still checked for immediate personal danger first, since group
+    // relocation (below) takes a few ticks to complete via MovePoint.
     GuidVector nearbyNpcs = AI_VALUE(GuidVector, "nearest npcs");
+    Unit* staticField = nullptr;
     for (auto& npc : nearbyNpcs)
     {
         Unit* unit = botAI->GetUnit(npc);
-        if (!unit || unit->GetEntry() != NPC_STATIC_FIELD) { continue; }
+        if (unit && unit->GetEntry() == NPC_STATIC_FIELD) { staticField = unit; break; }
+    }
 
+    if (staticField)
+    {
         float dangerRadius = 15.0f;  // estimate -- radius isn't queryable from this DB
-        if (vehicleBase->GetExactDist2d(unit) > dangerRadius) { continue; }
-
-        mm->Clear(false);
-        float angle = unit->GetAngle(vehicleBase);  // bearing from the hazard toward the bot
-        float fleeDist = dangerRadius + 10.0f;
-        float x = unit->GetPositionX() + cos(angle) * fleeDist;
-        float y = unit->GetPositionY() + std::sin(angle) * fleeDist;
-        vehicleBase->SetCanFly(true);
-        mm->MovePoint(0, x, y, vehicleBase->GetPositionZ());
-        vehicleBase->SendMovementFlagUpdate();
-        return true;
+        if (vehicleBase->GetExactDist2d(staticField) <= dangerRadius)
+        {
+            mm->Clear(false);
+            float angle = staticField->GetAngle(vehicleBase);  // bearing from the hazard toward the bot
+            float fleeDist = dangerRadius + 10.0f;
+            float x = staticField->GetPositionX() + cos(angle) * fleeDist;
+            float y = staticField->GetPositionY() + std::sin(angle) * fleeDist;
+            vehicleBase->SetCanFly(true);
+            mm->MovePoint(0, x, y, vehicleBase->GetPositionZ());
+            vehicleBase->SendMovementFlagUpdate();
+            return true;
+        }
     }
 
     // Per the strategy guide: "all drakes group up on one spot, roughly level with Malygos...
     // at least 30 yards away, and close enough to use Flame Spike" -- a tight cluster anchored
-    // on the boss, not a wide ring around a peer bot. Surge of Power (single-target beam) and
-    // Static Field (a fixed puddle, dodged above) aren't clump punishers here, so there's no
-    // reason to spread out the way phase 2's bubbles required.
-    Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
-    if (!boss) { return false; }
-
+    // on the boss, not a wide ring around a peer bot. Surge of Power (single-target beam) isn't
+    // a clump punisher, so there's no reason to spread out the way phase 2's bubbles required.
+    // The anchor's bearing off the boss is pushed away from a live Static Field so every drake
+    // (running this same deterministic formula off the same boss/hazard) re-aims to the same
+    // side together, instead of only the one bot that happened to be standing in it.
     int32 numPlayers = bot->GetRaidDifficulty() == RAID_DIFFICULTY_25MAN_NORMAL ? 25 : 10;
     float engageRange = 40.0f;     // comfortably past the 30yd minimum, within Flame Spike range
     float clusterRadius = 6.0f;    // tight grouping, just enough to avoid literal stacking
+    float baseAngle = staticField ? (boss->GetAngle(staticField) + static_cast<float>(M_PI)) : 0.0f;
     float clusterAngle = botAI->GetGroupSlotIndex(bot) * (2.0f * static_cast<float>(M_PI)) / numPlayers;
-    float idealX = boss->GetPositionX() + engageRange + cos(clusterAngle) * clusterRadius;
-    float idealY = boss->GetPositionY() + std::sin(clusterAngle) * clusterRadius;
+    float idealX = boss->GetPositionX() + cos(baseAngle) * engageRange + cos(clusterAngle) * clusterRadius;
+    float idealY = boss->GetPositionY() + std::sin(baseAngle) * engageRange + std::sin(clusterAngle) * clusterRadius;
 
     // Re-aim only when meaningfully off-slot, not every tick -- MovePoint toward a target
     // recalculated fresh every tick (the boss orbits continuously) never let the drake actually
@@ -424,6 +436,15 @@ bool EoEDrakeAttackAction::Execute(Event /*event*/)
     // the aura lands, since this is the first thing tried each tick. 10man has no detectable
     // marker, so recasting on cooldown whenever missing is the best available baseline there.
     if (!vehicleBase->HasAura(SPELL_FLAME_SHIELD) && CastDrakeSpellAction(vehicleBase, SPELL_FLAME_SHIELD, 0))
+    {
+        return true;
+    }
+
+    // Marked bot also pops Blazing Speed to help EoEFlyDrakeAction's flee maneuver (the same
+    // SPELL_SURGE_OF_POWER_WARN_SELECTOR_25 aura) actually outrun the beam, not just tank it.
+    if (vehicleBase->HasAura(SPELL_SURGE_OF_POWER_WARN_SELECTOR_25) &&
+        !vehicleBase->HasAura(SPELL_BLAZING_SPEED) &&
+        CastDrakeSpellAction(vehicleBase, SPELL_BLAZING_SPEED, 0))
     {
         return true;
     }
