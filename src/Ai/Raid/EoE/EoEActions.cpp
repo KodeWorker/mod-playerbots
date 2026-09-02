@@ -352,20 +352,36 @@ bool EoEFlyDrakeAction::Execute(Event /*event*/)
     // near it) so the AoE doesn't catch everyone else too.
     if (vehicleBase->HasAura(SPELL_SURGE_OF_POWER_WARN_SELECTOR_25))
     {
-        mm->Clear(false);
-        float angle = boss->GetAngle(vehicleBase);  // bearing from the boss toward the bot
-        float fleeDist = 25.0f;
-        float x = vehicleBase->GetPositionX() + cos(angle) * fleeDist;
-        float y = vehicleBase->GetPositionY() + std::sin(angle) * fleeDist;
-        vehicleBase->SetCanFly(true);
-        mm->MovePoint(0, x, y, vehicleBase->GetPositionZ());
-        vehicleBase->SendMovementFlagUpdate();
-        // Invalidate the last commanded cluster point -- once the mark clears (or on the very
-        // next tick otherwise), the formation logic below unconditionally re-aims and rejoins
-        // the pack immediately, instead of waiting on the settled-but-off-slot distance check
-        // to notice the drift from this detour.
-        _hasFormationTarget = false;
-        return true;
+        // Only the first tick of a given mark actually (re)commands the flee -- see
+        // _fleeingSurge. The mark lasts the whole ~3s warn-to-impact window, and this branch
+        // used to unconditionally win every tick of it (mm->Clear + return true), which, with
+        // this action now checked ahead of EoEDrakeAttackAction, meant Blazing Speed and Flame
+        // Shield -- the marked rider's actual survival cooldowns, per the guide "MUST use Flame
+        // Shield or risk dying" -- never got a turn to cast during the entire window.
+        if (!_fleeingSurge)
+        {
+            _fleeingSurge = true;
+            mm->Clear(false);
+            float angle = boss->GetAngle(vehicleBase);  // bearing from the boss toward the bot
+            float fleeDist = 25.0f;
+            float x = vehicleBase->GetPositionX() + cos(angle) * fleeDist;
+            float y = vehicleBase->GetPositionY() + std::sin(angle) * fleeDist;
+            vehicleBase->SetCanFly(true);
+            mm->MovePoint(0, x, y, vehicleBase->GetPositionZ());
+            vehicleBase->SendMovementFlagUpdate();
+            // Invalidate the last commanded cluster point -- once the mark clears (or on the
+            // very next tick otherwise), the formation logic below unconditionally re-aims and
+            // rejoins the pack immediately, instead of waiting on the settled-but-off-slot
+            // distance check to notice the drift from this detour.
+            _hasFormationTarget = false;
+            return true;
+        }
+        // Already fled this mark -- fall through and let lower-priority actions (Blazing
+        // Speed/Flame Shield casts) have the tick instead of re-committing to the same flee.
+    }
+    else
+    {
+        _fleeingSurge = false;
     }
 
     // Static Field is a stationary hazard dealing periodic damage for ~20s

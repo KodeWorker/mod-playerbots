@@ -74,6 +74,13 @@ private:
     bool _hasFormationTarget = false;
     float _formationTargetX = 0.0f;
     float _formationTargetY = 0.0f;
+
+    // Whether the current Surge of Power mark has already gotten its one flee command. Without
+    // this, HasAura(SPELL_SURGE_OF_POWER_WARN_SELECTOR_25) being true re-issues the flee (and
+    // returns true, winning the tick) every single tick for the whole ~3s marked window,
+    // starving EoEDrakeAttackAction (lower priority) of any turn to cast Blazing Speed or Flame
+    // Shield during it -- see the .cpp.
+    bool _fleeingSurge = false;
 };
 
 class EoEDrakeAttackAction : public Action
