@@ -33,9 +33,11 @@ enum EyeOfEternityIDs
 
     SPELL_ALEXSTRASZA_GIFT              = 61028,
 
-    // Phase 3: 25man warns the marked drake rider with this aura ~3s before the AoE lands
-    // (SPELL_PH3_SURGE_OF_POWER_25) -- 10man has no equivalent detectable marker, only an
-    // internal boss-script GUID and a chat emote to that player, neither queryable here.
+    // Phase 3: warns the marked drake rider with this aura ~3s before the AoE lands
+    // (SPELL_PH3_SURGE_OF_POWER_25 on 25man, SPELL_PH3_SURGE_OF_POWER on 10man). Name is a
+    // 25man leftover -- boss_malygos.cpp now applies the same aura via Unit::AddAura() on
+    // 10man too (bypassing this spell's own AOE target-select script, which only makes sense
+    // for the real 25man cast), so this check is raid-size agnostic despite the _25 suffix.
     SPELL_SURGE_OF_POWER_WARN_SELECTOR_25 = 60939,
 
     // Drake Abilities:
