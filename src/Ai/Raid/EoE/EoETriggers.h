@@ -92,7 +92,9 @@ public:
 // Phase 2: standing inside an Arcane Overload's blast radius grants a protective shield
 // (SPELL_ARCANE_OVERLOAD_PROTECTION) against Malygos's raid-wide AoE. Active only while a
 // grounded (non-vehicle) bot lacks that buff -- see ArcaneOverloadBubbleAction for why
-// proximity alone doesn't mean protected.
+// proximity alone doesn't mean protected -- AND the boss is actually approaching room center
+// to cast Surge of Power ("Deep Breath") soon (see MALYGOS_CENTER_POSITION), so shelter-
+// seeking doesn't outrank killing the adds for the ~55-65s between casts.
 class ArcaneOverloadBubbleTrigger : public Trigger
 {
 public:

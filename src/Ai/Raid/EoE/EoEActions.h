@@ -11,6 +11,14 @@
 const std::pair<float, float> MALYGOS_MAINTANK_POSITION = {757.0f, 1337.0f};
 const std::pair<float, float> MALYGOS_STACK_POSITION = {755.0f, 1301.0f};
 
+// Matches CenterPos in boss_malygos.cpp. Phase 2's Surge of Power ("Deep Breath") only ever
+// brings the boss this close to room center once per ~65s cycle, when it flies in to cast it
+// (EVENT_MOVE_TO_SURGE_OF_POWER/EVENT_SPELL_SURGE_OF_POWER) -- circling between casts orbits
+// far out at Phase2NorthPos's radius (~83yd). Used as a cheap, no-core-change proxy for "the
+// raid-wide AoE is imminent, go shelter now" -- see ArcaneOverloadBubbleTrigger.
+const std::pair<float, float> MALYGOS_CENTER_POSITION = {754.395f, 1301.27f};
+const float EOE_SURGE_IMMINENT_RADIUS = 30.0f;
+
 class MalygosPositionAction : public MovementAction
 {
 public:

@@ -114,6 +114,18 @@ bool ArcaneOverloadBubbleTrigger::IsActive()
     // "actually protected" can diverge. Already-protected bots skip this and keep fighting
     // instead of wandering between bubbles for no gain.
     if (bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION)) { return false; }
+    // This is the highest-priority action in the whole phase 2 strategy (wins over target
+    // acquisition and disk boarding both) -- it used to fire unconditionally the instant the
+    // buff lapsed, which for grounded melee/ranged still fighting the adds meant constantly
+    // abandoning them to re-approach a bubble, even with 60+ seconds left before Surge of
+    // Power ("Deep Breath") actually lands. Gate on the boss actually being near room center,
+    // which only happens once per ~65s cycle when it flies in to cast Surge -- otherwise stay
+    // on the current kill target/disk seat and only shelter once the cast is imminent.
+    if (boss->GetDistance2d(MALYGOS_CENTER_POSITION.first, MALYGOS_CENTER_POSITION.second) >
+        EOE_SURGE_IMMINENT_RADIUS)
+    {
+        return false;
+    }
 
     GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
     LOG_DEBUG("playerbots", "[EoE debug] {} arcane overload scan: phase={} candidates={}",
