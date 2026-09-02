@@ -12,8 +12,18 @@ void RaidEoEStrategy::InitTriggers(std::vector<TriggerNode*>& triggers)
     triggers.push_back(new TriggerNode("malygos",
         { NextAction("malygos target", ACTION_RAID) }));
 
-    triggers.push_back(new TriggerNode("group flying",
-        { NextAction("eoe fly drake", ACTION_NORMAL + 1) }));
+    // Own trigger, not Oculus's shared "group flying" -- that one also requires the real player
+    // (master) to be vehicle-mounted, which would silently disable every bot's Static
+    // Field/Surge of Power dodging the moment the master dismounts. See EoEGroupFlyingTrigger.
+    //
+    // Priority kept above "eoe drake attack" (not just higher than the old ACTION_NORMAL + 1)
+    // -- action selection stops at the first one that returns true each tick, so with combat
+    // evaluated first, a drake that's successfully attacking basically every tick would starve
+    // this of a turn entirely except on the rare tick attack itself fails. EoEFlyDrakeAction
+    // only returns true when it actually needs to move (hazard dodge or off-slot formation),
+    // so evaluating it first costs nothing on the ticks it doesn't.
+    triggers.push_back(new TriggerNode("eoe group flying",
+        { NextAction("eoe fly drake", ACTION_NORMAL + 6) }));
     triggers.push_back(new TriggerNode("drake combat",
         { NextAction("eoe drake attack", ACTION_NORMAL + 5) }));
 

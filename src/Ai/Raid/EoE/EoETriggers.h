@@ -111,4 +111,17 @@ public:
     bool IsActive() override;
 };
 
+// Phase 3: gates EoEFlyDrakeAction (Static Field/Surge of Power dodging, formation). Own name
+// instead of reusing Oculus's shared "group flying" trigger -- that one also requires the real
+// player (master) to be vehicle-mounted, which EoEFlyDrakeAction's own logic explicitly stopped
+// needing (see its header comment): if the master ever dismounts/dies, "group flying" going
+// inactive would silently disable dodging for every other bot too, regardless of their own
+// vehicle status. This only checks the bot's own.
+class EoEGroupFlyingTrigger : public Trigger
+{
+public:
+    EoEGroupFlyingTrigger(PlayerbotAI* botAI) : Trigger(botAI, "eoe group flying") {}
+    bool IsActive() override;
+};
+
 #endif

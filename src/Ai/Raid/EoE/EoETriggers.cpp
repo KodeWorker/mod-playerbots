@@ -186,3 +186,9 @@ bool HoverDiskTrigger::IsActive()
 
     return false;
 }
+
+bool EoEGroupFlyingTrigger::IsActive()
+{
+    Unit* vehicleBase = bot->GetVehicleBase();
+    return vehicleBase && vehicleBase->GetEntry() == NPC_WYRMREST_SKYTALON;
+}

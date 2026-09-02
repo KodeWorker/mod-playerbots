@@ -15,6 +15,7 @@ public:
         creators["power spark buff"] = &RaidEoETriggerContext::power_spark_buff;
         creators["arcane overload bubble"] = &RaidEoETriggerContext::arcane_overload_bubble;
         creators["eoe hover disk combat"] = &RaidEoETriggerContext::hover_disk_combat;
+        creators["eoe group flying"] = &RaidEoETriggerContext::eoe_group_flying;
     }
 
 private:
@@ -24,6 +25,7 @@ private:
     static Trigger* power_spark_buff(PlayerbotAI* ai) { return new PowerSparkGroundBuffTrigger(ai); }
     static Trigger* arcane_overload_bubble(PlayerbotAI* ai) { return new ArcaneOverloadBubbleTrigger(ai); }
     static Trigger* hover_disk_combat(PlayerbotAI* ai) { return new HoverDiskCombatTrigger(ai); }
+    static Trigger* eoe_group_flying(PlayerbotAI* ai) { return new EoEGroupFlyingTrigger(ai); }
 };
 
 #endif
