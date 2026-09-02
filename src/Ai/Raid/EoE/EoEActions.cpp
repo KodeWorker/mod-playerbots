@@ -445,27 +445,6 @@ bool EoEDrakeAttackAction::Execute(Event /*event*/)
         return false;
     }
 
-    // Flame Shield is a reactive defensive with a real 30s cooldown (the server enforces it via
-    // HasSpellCooldown inside CanCastVehicleSpell -- the 0 below is just our own no-op extra
-    // tracking), not a maintenance buff -- per the guide, the player marked by Surge of Power
-    // "MUST use Flame Shield or risk dying". SPELL_SURGE_OF_POWER_WARN_SELECTOR_25 (25man only)
-    // is checked here implicitly by trying every tick: whoever gets marked casts it the moment
-    // the aura lands, since this is the first thing tried each tick. 10man has no detectable
-    // marker, so recasting on cooldown whenever missing is the best available baseline there.
-    if (!vehicleBase->HasAura(SPELL_FLAME_SHIELD) && CastDrakeSpellAction(vehicleBase, SPELL_FLAME_SHIELD, 0))
-    {
-        return true;
-    }
-
-    // Marked bot also pops Blazing Speed to help EoEFlyDrakeAction's flee maneuver (the same
-    // SPELL_SURGE_OF_POWER_WARN_SELECTOR_25 aura) actually outrun the beam, not just tank it.
-    if (vehicleBase->HasAura(SPELL_SURGE_OF_POWER_WARN_SELECTOR_25) &&
-        !vehicleBase->HasAura(SPELL_BLAZING_SPEED) &&
-        CastDrakeSpellAction(vehicleBase, SPELL_BLAZING_SPEED, 0))
-    {
-        return true;
-    }
-
     // Unit* target = AI_VALUE(Unit*, "current target");
     Unit* boss = AI_VALUE2(Unit*, "find target", "malygos");
     // if (!boss) { return false; }
@@ -485,6 +464,52 @@ bool EoEDrakeAttackAction::Execute(Event /*event*/)
             break;
         }
     }
+
+    // Flame Shield is a reactive defensive with a real 30s cooldown (the server enforces it via
+    // HasSpellCooldown inside CanCastVehicleSpell -- the 0 below is just our own no-op extra
+    // tracking), not a maintenance buff -- per the guide, the player marked by Surge of Power
+    // "MUST use Flame Shield or risk dying". SPELL_SURGE_OF_POWER_WARN_SELECTOR_25 (25man only)
+    // is checked here implicitly by trying every tick: whoever gets marked casts it the moment
+    // the aura lands, since this is the first thing tried each tick. 10man has no detectable
+    // marker, so recasting on cooldown whenever missing is the best available baseline there.
+    //
+    // Flame Shield is itself a combo-point finisher (Spell::CheckCast's m_needComboPoints branch
+    // needs at least 1), and its shield duration scales with how many are spent -- 2s/3s/4s/5s/6s
+    // at 1/2/3/4/5 CP. The real Surge of Power warn-to-impact gap is a fixed 3s
+    // (EVENT_SPELL_PH3_SURGE_OF_POWER in boss_malygos.cpp), so 1 CP (2s) doesn't cover it -- hold
+    // out for 2 CP (3s) before spending. Below that, build instead of blindly attempting the cast
+    // every tick: attempting it at 0 CP wasn't just a wasted attempt, it starved combo generation
+    // entirely, since this ran before DrakeDpsAction/DrakeHealAction -- the only things that ever
+    // build combo points -- got a turn. The whole encounter logged zero successful Flame Shield
+    // casts before this fix.
+    uint8 const minComboPointsForFlameShield = 2;
+    if (!vehicleBase->HasAura(SPELL_FLAME_SHIELD))
+    {
+        uint8 comboPoints = vehicleBase->GetComboPoints();
+        if (comboPoints < minComboPointsForFlameShield)
+        {
+            // DPS role builds combo points here via Flame Spike; heal role builds them via
+            // DrakeHealAction's Revivify below instead, so just fall through for healers.
+            if (boss && !botAI->IsHeal(bot))
+            {
+                return CastDrakeSpellAction(boss, SPELL_FLAME_SPIKE, 0);
+            }
+        }
+        else if (CastDrakeSpellAction(vehicleBase, SPELL_FLAME_SHIELD, 0))
+        {
+            return true;
+        }
+    }
+
+    // Marked bot also pops Blazing Speed to help EoEFlyDrakeAction's flee maneuver (the same
+    // SPELL_SURGE_OF_POWER_WARN_SELECTOR_25 aura) actually outrun the beam, not just tank it.
+    if (vehicleBase->HasAura(SPELL_SURGE_OF_POWER_WARN_SELECTOR_25) &&
+        !vehicleBase->HasAura(SPELL_BLAZING_SPEED) &&
+        CastDrakeSpellAction(vehicleBase, SPELL_BLAZING_SPEED, 0))
+    {
+        return true;
+    }
+
     // Check this again to see if a target was assigned
     if (!boss)
     {
