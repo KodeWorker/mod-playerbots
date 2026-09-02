@@ -117,7 +117,19 @@ bool MalygosPositionAction::Execute(Event /*event*/)
                 break;
             }
         }
-        if (!addTarget) { return false; }
+        if (!addTarget)
+        {
+            // Both Nexus Lords are dead -- the only way grounded melee can still contribute is
+            // a freed Hover Disk seat (HoverDiskTrigger boards them the instant one opens).
+            // There's nothing to walk toward until then, and ceding this tick to a lower-
+            // priority combat movement risks chasing a stale/invalid attack state toward the
+            // airborne, unreachable Scion -- dragging the bot out of its Arcane Overload
+            // bubble. Cancel any leftover movement and hold this slot instead so nothing else
+            // claims it; ArcaneOverloadBubbleTrigger keeps re-sheltering independently if the
+            // bubble the bot is standing in decays before a disk frees up.
+            bot->GetMotionMaster()->Clear(false);
+            return true;
+        }
 
         // The add is unreachable by ground pathfinding while still airborne on its Hover
         // Disk intro flight -- move toward its (x,y) so melee is in place the instant it lands.
