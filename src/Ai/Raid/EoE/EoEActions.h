@@ -130,6 +130,11 @@ private:
     // Sticks with whatever bubble was last committed to, instead of re-picking "nearest"
     // every tick -- see the .cpp for why.
     ObjectGuid _targetBubble;
+    // A bubble's radius only ever shrinks, never grows back -- once one's been rejected as
+    // decayed-but-still-close, it's decayed for the rest of its life. Remembered across ticks
+    // (unlike _targetBubble, which only remembers the current pick) so the "freshest bubble"
+    // reselect below can't just walk straight back onto it every tick. See the .cpp.
+    std::vector<ObjectGuid> _decayedBubbles;
 };
 
 #endif

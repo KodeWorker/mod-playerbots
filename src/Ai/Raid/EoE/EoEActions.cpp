@@ -636,10 +636,16 @@ bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
     // alive at once, given the ~15s respawn cadence -- see boss_malygos.cpp), so being close to
     // its spawn point doesn't mean the buff is still reachable there. If we're at the old 3yd
     // proximity mark but still lack the actual buff, this one's radius has likely shrunk past
-    // us -- drop it and pick a fresher one below instead of standing still uselessly.
+    // us -- drop it and pick a fresher one below instead of standing still uselessly. Radius
+    // only ever shrinks, never regrows, so blacklist it for the rest of its life -- otherwise,
+    // when it's the only bubble around, "pick the freshest" below just walks straight back onto
+    // this same decayed one next tick: still inside the stale 3yd mark, no MoveTo ever fires,
+    // and the bot sits there FAILing forever instead of holding position and waiting for the
+    // next one to spawn (~15s cadence).
     if (unit && bot->GetDistance2d(unit->GetPositionX(), unit->GetPositionY()) <= 3.0f &&
         !bot->HasAura(SPELL_ARCANE_OVERLOAD_PROTECTION))
     {
+        _decayedBubbles.push_back(unit->GetGUID());
         unit = nullptr;
     }
 
@@ -650,6 +656,10 @@ bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
         GuidVector targets = AI_VALUE(GuidVector, "nearest npcs");
         for (auto& target : targets)
         {
+            if (std::find(_decayedBubbles.begin(), _decayedBubbles.end(), target) != _decayedBubbles.end())
+            {
+                continue;
+            }
             Unit* candidate = botAI->GetUnit(target);
             if (candidate && candidate->GetEntry() == NPC_ARCANE_OVERLOAD &&
                 (!unit || candidate->GetGUID().GetCounter() > unit->GetGUID().GetCounter()))
@@ -658,6 +668,7 @@ bool ArcaneOverloadBubbleAction::Execute(Event /*event*/)
             }
         }
         if (unit) { _targetBubble = unit->GetGUID(); }
+        else { _targetBubble.Clear(); }
     }
     if (!unit) { return false; }
 
