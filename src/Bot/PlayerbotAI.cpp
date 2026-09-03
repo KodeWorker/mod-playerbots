@@ -4049,7 +4049,15 @@ bool PlayerbotAI::CanCastVehicleSpell(uint32 spellId, Unit* target)
 
     if (spellInfo->Targets & TARGET_FLAG_DEST_LOCATION)
         spell->m_targets.SetDst(dest);
-    else if (spellTarget != vehicleBase)
+    else
+        // Always set the unit target, self-casts (spellTarget == vehicleBase) included -- this
+        // used to skip it for self-casts, leaving m_targets completely empty for any spell whose
+        // implicit target type needs an explicit unit target even to cast on yourself. CheckCast
+        // then failed those with SPELL_FAILED_BAD_TARGETS every time, before ever reaching an
+        // actual cooldown/range/moving check -- Flame Shield (self-cast) included, which is why
+        // it never once passed this check in-game despite meeting every other requirement.
+        // CastVehicleSpell (the real cast, below) already does this correctly; this just matches
+        // it, so the check and the cast agree on what's castable.
         spell->m_targets.SetUnitTarget(spellTarget);
 
     SpellCastResult result = spell->CheckCast(true);
